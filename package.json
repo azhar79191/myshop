@@ -1,0 +1,40 @@
+{
+  "name": "bismillah-spray-center-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Bismillah Spray Center",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/utils/seedData.js",
+    "seed:admin": "node src/utils/seedAdmin.js",
+    "seed:contacts": "node src/utils/seedContacts.js",
+    "seed:gallery": "node src/utils/seedGallery.js",
+    "seed:brands": "node src/utils/seedBrands.js",
+    "clean": "node src/utils/cleanDatabase.js"
+  },
+  "keywords": [
+    "agriculture",
+    "pesticides",
+    "pakistan",
+    "express",
+    "mongodb"
+  ],
+  "author": "Bismillah Spray Center",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^7.2.0",
+    "mongoose": "^8.0.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}
