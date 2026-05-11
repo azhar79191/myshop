@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: bismillah-spray-center-api
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRE
+        value: 1h
+      - key: FRONTEND_URL
+        value: https://bismillahspraycenter.vercel.app
+    healthCheckPath: /api/health
+    autoDeploy: true
