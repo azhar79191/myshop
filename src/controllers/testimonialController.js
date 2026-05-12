@@ -128,7 +128,7 @@ export const approveTestimonial = async (req, res, next) => {
       isApproved: isApproved !== undefined ? isApproved : true,
     };
 
-    if (isApproved) {
+    if (isApproved && req.user && req.user._id) {
       updateData.approvedBy = req.user._id;
       updateData.approvedAt = new Date();
     }
