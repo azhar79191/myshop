@@ -7,6 +7,8 @@ import contactRoutes from './routes/contactRoutes.js';
 import faqRoutes from './routes/faqRoutes.js';
 import galleryRoutes from './routes/galleryRoutes.js';
 import brandRoutes from './routes/brandRoutes.js';
+import serviceRequestRoutes from './routes/serviceRequestRoutes.js';
+import testimonialRoutes from './routes/testimonialRoutes.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -63,6 +65,8 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/brands', brandRoutes);
+app.use('/api/service-requests', serviceRequestRoutes);
+app.use('/api/testimonials', testimonialRoutes);
 
 // 404 handler
 app.use(notFound);
