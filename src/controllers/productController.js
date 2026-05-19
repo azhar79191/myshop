@@ -55,9 +55,10 @@ export const getProducts = asyncHandler(async (req, res) => {
   const limitNum = Math.max(1, Math.min(50, parseInt(limit, 10)));
   const skip = (pageNum - 1) * limitNum;
 
-  // Execute query
+  // Execute query with field selection to reduce payload size
   const [products, total] = await Promise.all([
     Product.find(filter)
+      .select('-usage -__v') // Exclude large fields not needed in list view
       .sort(sort)
       .skip(skip)
       .limit(limitNum)
@@ -109,6 +110,7 @@ export const getFeaturedProducts = asyncHandler(async (req, res) => {
   const limit = Math.min(10, parseInt(req.query.limit, 10) || 6);
 
   const products = await Product.find({ featured: true, stockStatus: { $ne: 'Out of Stock' } })
+    .select('-usage -__v') // Exclude large fields
     .sort('-createdAt')
     .limit(limit)
     .lean();
@@ -253,7 +255,7 @@ export const getRelatedProducts = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const limit = Math.min(8, parseInt(req.query.limit, 10) || 4);
 
-  const product = await Product.findById(id).lean();
+  const product = await Product.findById(id).select('category brand').lean();
   if (!product) {
     return errorResponse(res, 'Product not found', 404);
   }
@@ -262,6 +264,7 @@ export const getRelatedProducts = asyncHandler(async (req, res) => {
     _id: { $ne: id },
     $or: [{ category: product.category }, { brand: product.brand }],
   })
+    .select('-usage -__v') // Exclude large fields
     .limit(limit)
     .lean();
 

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import compression from 'compression';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
@@ -14,6 +15,18 @@ import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 dotenv.config();
 
 const app = express();
+
+// Enable compression for all responses
+app.use(compression({
+  level: 6, // Compression level (0-9)
+  threshold: 1024, // Only compress responses larger than 1KB
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 
 // CORS configuration
 const allowedOrigins = [
@@ -36,7 +49,8 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  maxAge: 86400 // Cache preflight requests for 24 hours
 };
 
 app.use(cors(corsOptions));
@@ -44,6 +58,18 @@ app.use(cors(corsOptions));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Disable x-powered-by header for security
+app.disable('x-powered-by');
+
+// Set cache headers for static responses
+app.use((req, res, next) => {
+  // Cache GET requests for public endpoints
+  if (req.method === 'GET' && !req.path.includes('/admin')) {
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+  }
+  next();
+});
 
 // Favicon handler (prevent 404 errors)
 app.get('/favicon.ico', (req, res) => res.status(204).end());
@@ -55,6 +81,7 @@ app.get('/api/health', (req, res) => {
     message: 'Bismillah Spray Center API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
   });
 });
 

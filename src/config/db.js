@@ -6,9 +6,16 @@ import mongoose from 'mongoose';
  */
 export const connectDB = async () => {
   try {
-    // Connection options
+    // Optimized connection options for performance
     const options = {
-      // Mongoose 6+ handles most options automatically
+      maxPoolSize: 10, // Maximum number of connections in the pool
+      minPoolSize: 2, // Minimum number of connections
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      serverSelectionTimeoutMS: 10000, // Timeout for server selection
+      heartbeatFrequencyMS: 10000, // Check server health every 10 seconds
+      retryWrites: true, // Retry failed writes
+      retryReads: true, // Retry failed reads
+      compressors: ['zlib'], // Enable compression for network traffic
     };
 
     // If using MongoDB Atlas or remote connection, add SSL options
@@ -19,8 +26,13 @@ export const connectDB = async () => {
     }
 
     const conn = await mongoose.connect(process.env.MONGODB_URI, options);
+    
+    // Enable query result caching
+    mongoose.set('strictQuery', false);
+    
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);
+    console.log(`🔧 Connection Pool: ${options.maxPoolSize} connections`);
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
     console.error('\n💡 Troubleshooting:');

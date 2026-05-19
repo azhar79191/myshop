@@ -97,10 +97,13 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Index for search
+// Compound indexes for common query patterns
 productSchema.index({ name: 'text', description: 'text', brand: 'text', category: 'text' });
-productSchema.index({ category: 1, brand: 1 });
-productSchema.index({ featured: 1 });
+productSchema.index({ category: 1, brand: 1, stockStatus: 1 }); // For filtered queries
+productSchema.index({ featured: 1, stockStatus: 1, createdAt: -1 }); // For featured products
+productSchema.index({ createdAt: -1 }); // For sorting by date
+productSchema.index({ 'sizes.price': 1 }); // For price range queries
+productSchema.index({ stockStatus: 1 }); // For stock filtering
 
 // Pre-save middleware to generate slug
 productSchema.pre('save', function (next) {
