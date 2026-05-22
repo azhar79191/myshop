@@ -66,7 +66,28 @@ app.disable('x-powered-by');
 app.use((req, res, next) => {
   // Cache GET requests for public endpoints
   if (req.method === 'GET' && !req.path.includes('/admin')) {
-    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+    const path = req.path;
+    
+    // Static data - cache longer
+    if (path.includes('/categories') || path.includes('/brands')) {
+      res.set('Cache-Control', 'public, max-age=3600, s-maxage=7200'); // 1 hour client, 2 hours CDN
+    } 
+    // Products - medium cache
+    else if (path.includes('/products')) {
+      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800'); // 10 min client, 30 min CDN
+    }
+    // Gallery and FAQs - medium cache
+    else if (path.includes('/gallery') || path.includes('/faqs')) {
+      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800'); // 10 min client, 30 min CDN
+    }
+    // Testimonials - longer cache
+    else if (path.includes('/testimonials')) {
+      res.set('Cache-Control', 'public, max-age=900, s-maxage=2700'); // 15 min client, 45 min CDN
+    }
+    // Other GET requests
+    else {
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=600'); // 5 min client, 10 min CDN
+    }
   }
   next();
 });

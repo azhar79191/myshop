@@ -8,8 +8,8 @@ export const connectDB = async () => {
   try {
     // Optimized connection options for performance
     const options = {
-      maxPoolSize: 10, // Maximum number of connections in the pool
-      minPoolSize: 2, // Minimum number of connections
+      maxPoolSize: 20, // Increased for better concurrency
+      minPoolSize: 5, // Keep more connections ready
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
       serverSelectionTimeoutMS: 10000, // Timeout for server selection
       heartbeatFrequencyMS: 10000, // Check server health every 10 seconds

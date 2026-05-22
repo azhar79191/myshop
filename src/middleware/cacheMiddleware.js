@@ -7,8 +7,8 @@ const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Cache middleware
- * @param {number} duration - Cache duration in seconds (default: 300)
+ * Cache middleware with dynamic duration based on endpoint
+ * @param {number} duration - Default cache duration in seconds (default: 300)
  */
 export const cacheMiddleware = (duration = 300) => {
   return (req, res, next) => {
@@ -17,13 +17,34 @@ export const cacheMiddleware = (duration = 300) => {
       return next();
     }
 
+    // Determine cache duration based on endpoint
+    let cacheDuration = duration;
+    const url = req.originalUrl || req.url;
+    
+    // Static data - cache longer
+    if (url.includes('/categories') || url.includes('/brands')) {
+      cacheDuration = 3600; // 1 hour for categories/brands
+    } 
+    // Products - medium cache
+    else if (url.includes('/products')) {
+      cacheDuration = 600; // 10 minutes for products
+    }
+    // Gallery and FAQs - medium cache
+    else if (url.includes('/gallery') || url.includes('/faqs')) {
+      cacheDuration = 600; // 10 minutes
+    }
+    // Testimonials - longer cache
+    else if (url.includes('/testimonials')) {
+      cacheDuration = 900; // 15 minutes
+    }
+
     // Create cache key from URL and query params
-    const cacheKey = `${req.originalUrl || req.url}`;
+    const cacheKey = url;
     const cached = cache.get(cacheKey);
 
     // Check if cache exists and is still valid
-    if (cached && Date.now() - cached.timestamp < duration * 1000) {
-      console.log(`[CACHE HIT] ${cacheKey}`);
+    if (cached && Date.now() - cached.timestamp < cacheDuration * 1000) {
+      console.log(`[CACHE HIT] ${cacheKey} (${cacheDuration}s)`);
       return res.status(200).json(cached.data);
     }
 
@@ -38,7 +59,7 @@ export const cacheMiddleware = (duration = 300) => {
           data,
           timestamp: Date.now(),
         });
-        console.log(`[CACHE SET] ${cacheKey}`);
+        console.log(`[CACHE SET] ${cacheKey} (${cacheDuration}s)`);
       }
       return originalJson(data);
     };
