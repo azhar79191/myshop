@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import https from 'https';
 import app from './app.js';
 import { connectDB } from './config/db.js';
 
@@ -13,6 +14,17 @@ const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDB();
+
+    // Self-ping to prevent Render free tier sleep (every 14 minutes)
+    if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+      setInterval(() => {
+        https.get(`${process.env.RENDER_EXTERNAL_URL}/api/health`, (res) => {
+          console.log(`🏓 Keep-alive ping: ${res.statusCode}`);
+        }).on('error', (err) => {
+          console.error('Keep-alive ping failed:', err.message);
+        });
+      }, 14 * 60 * 1000);
+    }
 
     // Start Express server
     const server = app.listen(PORT, () => {
