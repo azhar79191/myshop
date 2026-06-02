@@ -20,9 +20,6 @@ services:
       - key: FRONTEND_URL
         value: https://bismillahspraycenter.vercel.app
       - key: RENDER_EXTERNAL_URL
-        fromService:
-          type: web
-          name: bismillah-spray-center-api
-          property: host
+        sync: false
     healthCheckPath: /api/health
     autoDeploy: true
