@@ -18,10 +18,11 @@ const startServer = async () => {
     // Self-ping to prevent Render free tier sleep (every 14 minutes)
     if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
       setInterval(() => {
-        https.get(`${process.env.RENDER_EXTERNAL_URL}/api/health`, (res) => {
-          console.log(`🏓 Keep-alive ping: ${res.statusCode}`);
+        const url = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+        https.get(url, (res) => {
+          console.log(`🏓 Keep-alive ping [${new Date().toISOString()}] → ${url} | Status: ${res.statusCode}`);
         }).on('error', (err) => {
-          console.error('Keep-alive ping failed:', err.message);
+          console.error(`❌ Keep-alive ping failed [${new Date().toISOString()}] → ${url} | ${err.message}`);
         });
       }, 14 * 60 * 1000);
     }

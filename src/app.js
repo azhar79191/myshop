@@ -92,6 +92,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Request logger
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${Date.now() - start}ms)`);
+  });
+  next();
+});
+
 // Favicon handler (prevent 404 errors)
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
