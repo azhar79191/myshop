@@ -6,6 +6,7 @@ import {
   updateGalleryImage,
   deleteGalleryImage,
 } from '../controllers/galleryController.js';
+import { protect } from '../middleware/authMiddleware.js';
 import { uploadSingle, handleUploadError } from '../middleware/uploadMiddleware.js';
 import { cacheMiddleware, clearCacheMiddleware } from '../middleware/cacheMiddleware.js';
 
