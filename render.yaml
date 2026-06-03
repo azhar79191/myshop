@@ -19,6 +19,12 @@ services:
         value: 1h
       - key: FRONTEND_URL
         value: https://bismillahspraycenter.vercel.app
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
       - key: RENDER_EXTERNAL_URL
         sync: false
     healthCheckPath: /api/health

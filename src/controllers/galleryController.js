@@ -1,5 +1,7 @@
 import Gallery from '../models/Gallery.js';
+import cloudinary from '../config/cloudinary.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
+import { fileToCloudinaryUrl } from '../middleware/uploadMiddleware.js';
 
 /**
  * @desc    Get all gallery images
@@ -48,22 +50,15 @@ export const getGalleryImageById = async (req, res, next) => {
  */
 export const createGalleryImage = async (req, res, next) => {
   try {
-    const { title, description, image, category, order, isActive } = req.body;
+    const { title, description, category, order, isActive } = req.body;
 
-    // Validate required fields
+    const image = fileToCloudinaryUrl(req.file) || req.body.image;
+
     if (!title || !image) {
       return errorResponse(res, 'Title and image are required', 400);
     }
 
-    const newImage = await Gallery.create({
-      title,
-      description,
-      image,
-      category,
-      order,
-      isActive,
-    });
-
+    const newImage = await Gallery.create({ title, description, image, category, order, isActive });
     successResponse(res, newImage, 'Gallery image created successfully', 201);
   } catch (error) {
     next(error);
@@ -77,24 +72,29 @@ export const createGalleryImage = async (req, res, next) => {
  */
 export const updateGalleryImage = async (req, res, next) => {
   try {
-    const { title, description, image, category, order, isActive } = req.body;
+    const { title, description, category, order, isActive } = req.body;
 
     const galleryImage = await Gallery.findById(req.params.id);
+    if (!galleryImage) return errorResponse(res, 'Gallery image not found', 404);
 
-    if (!galleryImage) {
-      return errorResponse(res, 'Gallery image not found', 404);
-    }
-
-    // Update fields
     if (title !== undefined) galleryImage.title = title;
     if (description !== undefined) galleryImage.description = description;
-    if (image !== undefined) galleryImage.image = image;
     if (category !== undefined) galleryImage.category = category;
     if (order !== undefined) galleryImage.order = order;
     if (isActive !== undefined) galleryImage.isActive = isActive;
 
-    const updatedImage = await galleryImage.save();
+    // If new file uploaded, delete old from Cloudinary and set new URL
+    if (req.file) {
+      if (galleryImage.image && galleryImage.image.includes('cloudinary')) {
+        const publicId = galleryImage.image.split('/').slice(-2).join('/').split('.')[0];
+        await cloudinary.uploader.destroy(publicId);
+      }
+      galleryImage.image = fileToCloudinaryUrl(req.file);
+    } else if (req.body.image) {
+      galleryImage.image = req.body.image;
+    }
 
+    const updatedImage = await galleryImage.save();
     successResponse(res, updatedImage, 'Gallery image updated successfully');
   } catch (error) {
     next(error);
@@ -109,13 +109,15 @@ export const updateGalleryImage = async (req, res, next) => {
 export const deleteGalleryImage = async (req, res, next) => {
   try {
     const image = await Gallery.findById(req.params.id);
+    if (!image) return errorResponse(res, 'Gallery image not found', 404);
 
-    if (!image) {
-      return errorResponse(res, 'Gallery image not found', 404);
+    // Delete from Cloudinary
+    if (image.image && image.image.includes('cloudinary')) {
+      const publicId = image.image.split('/').slice(-2).join('/').split('.')[0];
+      await cloudinary.uploader.destroy(publicId);
     }
 
     await image.deleteOne();
-
     successResponse(res, null, 'Gallery image deleted successfully');
   } catch (error) {
     next(error);

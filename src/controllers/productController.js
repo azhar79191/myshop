@@ -1,6 +1,6 @@
 import Product from '../models/Product.js';
 import { successResponse, errorResponse, paginateResponse, asyncHandler } from '../utils/apiResponse.js';
-import { fileToBase64, filesToBase64, isValidBase64Image } from '../middleware/uploadMiddleware.js';
+import { fileToCloudinaryUrl, filesToCloudinaryUrls, isValidBase64Image } from '../middleware/uploadMiddleware.js';
 
 /**
  * @desc    Get all products with filtering, sorting, and pagination
@@ -155,23 +155,13 @@ export const createProduct = asyncHandler(async (req, res) => {
     }
   }
 
-  // Handle file upload (convert to base64)
   if (req.file) {
-    productData.image = fileToBase64(req.file);
+    productData.image = fileToCloudinaryUrl(req.file);
   }
 
-  // Handle multiple files
   if (req.files && req.files.length > 0) {
-    productData.images = filesToBase64(req.files);
-    if (!productData.image) {
-      productData.image = productData.images[0];
-    }
-  }
-
-  // Handle base64 image from request body (for direct base64 upload)
-  if (productData.imageBase64 && isValidBase64Image(productData.imageBase64)) {
-    productData.image = productData.imageBase64;
-    delete productData.imageBase64;
+    productData.images = filesToCloudinaryUrls(req.files);
+    if (!productData.image) productData.image = productData.images[0];
   }
 
   // Validate required image
@@ -201,20 +191,12 @@ export const updateProduct = asyncHandler(async (req, res) => {
     }
   }
 
-  // Handle file upload (convert to base64)
   if (req.file) {
-    updateData.image = fileToBase64(req.file);
+    updateData.image = fileToCloudinaryUrl(req.file);
   }
 
-  // Handle multiple files
   if (req.files && req.files.length > 0) {
-    updateData.images = filesToBase64(req.files);
-  }
-
-  // Handle base64 image from request body
-  if (updateData.imageBase64 && isValidBase64Image(updateData.imageBase64)) {
-    updateData.image = updateData.imageBase64;
-    delete updateData.imageBase64;
+    updateData.images = filesToCloudinaryUrls(req.files);
   }
 
   const product = await Product.findByIdAndUpdate(id, updateData, {
