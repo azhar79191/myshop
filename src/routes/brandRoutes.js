@@ -7,17 +7,16 @@ import {
   deleteBrand,
 } from '../controllers/brandController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { uploadSingle, handleUploadError } from '../middleware/uploadMiddleware.js';
 import { cacheMiddleware, clearCacheMiddleware } from '../middleware/cacheMiddleware.js';
 
 const router = express.Router();
 
-// Public routes with caching
-router.get('/', cacheMiddleware(600), getAllBrands); // 10 minutes
+router.get('/', cacheMiddleware(600), getAllBrands);
 router.get('/:id', cacheMiddleware(600), getBrandById);
 
-// Protected routes (Admin only) - clear cache on mutations
-router.post('/', protect, clearCacheMiddleware(['/api/brands']), createBrand);
-router.put('/:id', protect, clearCacheMiddleware(['/api/brands']), updateBrand);
+router.post('/', protect, clearCacheMiddleware(['/api/brands']), uploadSingle, handleUploadError, createBrand);
+router.put('/:id', protect, clearCacheMiddleware(['/api/brands']), uploadSingle, handleUploadError, updateBrand);
 router.delete('/:id', protect, clearCacheMiddleware(['/api/brands']), deleteBrand);
 
 export default router;
