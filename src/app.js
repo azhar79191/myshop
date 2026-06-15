@@ -104,6 +104,10 @@ app.use((req, res, next) => {
 // Favicon handler (prevent 404 errors)
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+// Root and health routes for UptimeRobot / Render
+app.get('/', (req, res) => res.status(200).json({ status: 'ok' }));
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
