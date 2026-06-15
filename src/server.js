@@ -29,9 +29,10 @@ const startServer = async () => {
 
     // Start Express server
     const server = app.listen(PORT, () => {
+      const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
       console.log(`\n🚀 Server running in ${process.env.NODE_ENV || 'development'} mode`);
-      console.log(`📡 API URL: http://localhost:${PORT}/api`);
-      console.log(`🔍 Health Check: http://localhost:${PORT}/api/health\n`);
+      console.log(`📡 API URL: ${baseUrl}/api`);
+      console.log(`🔍 Health Check: ${baseUrl}/api/health\n`);
     });
 
     // Handle unhandled promise rejections
