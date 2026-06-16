@@ -16,7 +16,7 @@ export const getAllGalleryImages = async (req, res, next) => {
     if (category) filter.category = category;
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
-    const images = await Gallery.find(filter).sort({ order: 1, createdAt: -1 });
+    const images = await Gallery.find(filter).select('-__v').sort({ order: 1, createdAt: -1 }).lean();
 
     successResponse(res, images, 'Gallery images retrieved successfully');
   } catch (error) {

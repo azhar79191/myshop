@@ -16,6 +16,12 @@ dotenv.config();
 
 const app = express();
 
+// Enable ETag support for cache validation
+app.set('etag', 'strong')
+
+// Enable ETag support for cache validation
+app.set('etag', 'strong')
+
 // Enable compression for all responses
 app.use(compression({
   level: 6, // Compression level (0-9)
@@ -64,33 +70,32 @@ app.disable('x-powered-by');
 
 // Set cache headers for static responses
 app.use((req, res, next) => {
-  // Cache GET requests for public endpoints
   if (req.method === 'GET' && !req.path.includes('/admin')) {
-    const path = req.path;
-    
-    // Static data - cache longer
-    if (path.includes('/categories') || path.includes('/brands')) {
-      res.set('Cache-Control', 'public, max-age=3600, s-maxage=7200'); // 1 hour client, 2 hours CDN
-    } 
-    // Products - medium cache
-    else if (path.includes('/products')) {
-      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800'); // 10 min client, 30 min CDN
-    }
-    // Gallery and FAQs - medium cache
-    else if (path.includes('/gallery') || path.includes('/faqs')) {
-      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800'); // 10 min client, 30 min CDN
-    }
-    // Testimonials - longer cache
-    else if (path.includes('/testimonials')) {
-      res.set('Cache-Control', 'public, max-age=900, s-maxage=2700'); // 15 min client, 45 min CDN
-    }
-    // Other GET requests
-    else {
-      res.set('Cache-Control', 'public, max-age=300, s-maxage=600'); // 5 min client, 10 min CDN
+    const path = req.path
+    if (path.includes('/categories') || path.includes('/brands/all')) {
+      // Categories & brand names — rarely change, cache 1hr client / 6hr CDN
+      res.set('Cache-Control', 'public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400')
+    } else if (path.includes('/products/featured')) {
+      // Featured products — cache 10min client / 30min CDN
+      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600')
+    } else if (path.includes('/products')) {
+      // Products list — cache 5min client / 15min CDN
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=900, stale-while-revalidate=1800')
+    } else if (path.includes('/gallery') || path.includes('/faqs')) {
+      // Gallery & FAQs — cache 10min client / 30min CDN
+      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600')
+    } else if (path.includes('/testimonials')) {
+      // Testimonials — cache 15min client / 1hr CDN
+      res.set('Cache-Control', 'public, max-age=900, s-maxage=3600, stale-while-revalidate=7200')
+    } else if (path.includes('/brands')) {
+      // Full brands list with logos — cache 10min
+      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600')
+    } else {
+      res.set('Cache-Control', 'public, max-age=60, s-maxage=300')
     }
   }
-  next();
-});
+  next()
+})
 
 // Request logger
 app.use((req, res, next) => {

@@ -39,9 +39,8 @@ const brandSchema = new mongoose.Schema(
   }
 );
 
-// Index for faster queries
-brandSchema.index({ order: 1 });
-brandSchema.index({ isActive: 1 });
+// Compound index for the most common query: active brands sorted by order
+brandSchema.index({ isActive: 1, order: 1, createdAt: -1 });
 
 const Brand = mongoose.model('Brand', brandSchema);
 export default Brand;

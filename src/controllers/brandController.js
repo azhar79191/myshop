@@ -15,7 +15,7 @@ export const getAllBrands = async (req, res, next) => {
     const filter = {};
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
-    const brands = await Brand.find(filter).sort({ order: 1, createdAt: -1 });
+    const brands = await Brand.find(filter).select('-__v').sort({ order: 1, createdAt: -1 }).lean();
 
     successResponse(res, brands, 'Brands retrieved successfully');
   } catch (error) {
