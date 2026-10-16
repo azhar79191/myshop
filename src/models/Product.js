@@ -30,10 +30,8 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, 'Category is required'],
-      enum: {
-        values: ['Insecticides', 'Herbicides', 'Fungicides', 'Fertilizers', 'Seeds'],
-        message: 'Category must be one of: Insecticides, Herbicides, Fungicides, Fertilizers, Seeds',
-      },
+      trim: true,
+      maxlength: [50, 'Category cannot exceed 50 characters'],
     },
     brand: {
       type: String,

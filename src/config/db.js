@@ -6,6 +6,11 @@ import mongoose from 'mongoose';
  */
 export const connectDB = async () => {
   try {
+    const mongoUri = process.env.MONGODB_URI?.trim();
+    if (!mongoUri) {
+      throw new Error('MONGODB_URI is not set. Add it to the backend .env file.');
+    }
+
     // Optimized connection options for performance
     const options = {
       maxPoolSize: 20, // Increased for better concurrency
@@ -19,13 +24,13 @@ export const connectDB = async () => {
     };
 
     // If using MongoDB Atlas or remote connection, add SSL options
-    if (process.env.MONGODB_URI.includes('mongodb+srv') || process.env.MONGODB_URI.includes('ssl=true')) {
+    if (mongoUri.includes('mongodb+srv') || mongoUri.includes('ssl=true')) {
       options.ssl = true;
       options.tls = true;
       options.tlsAllowInvalidCertificates = false;
     }
 
-    const conn = await mongoose.connect(process.env.MONGODB_URI, options);
+    const conn = await mongoose.connect(mongoUri, options);
     
     // Enable query result caching
     mongoose.set('strictQuery', false);

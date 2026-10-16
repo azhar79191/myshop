@@ -10,6 +10,7 @@ import galleryRoutes from './routes/galleryRoutes.js';
 import brandRoutes from './routes/brandRoutes.js';
 import serviceRequestRoutes from './routes/serviceRequestRoutes.js';
 import testimonialRoutes from './routes/testimonialRoutes.js';
+import siteSettingsRoutes from './routes/siteSettingsRoutes.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -126,6 +127,7 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/site-settings', siteSettingsRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/faqs', faqRoutes);

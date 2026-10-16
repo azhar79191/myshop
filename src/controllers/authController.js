@@ -73,6 +73,39 @@ export const getMe = async (req, res) => {
 };
 
 /**
+ * @desc    Update the current admin's profile details and optional photo
+ * @route   PUT /api/auth/profile
+ * @access  Private
+ */
+export const updateProfile = async (req, res) => {
+  try {
+    const { fullName, email } = req.body;
+    if (fullName === undefined && email === undefined && !req.file) {
+      return errorResponse(res, 'Provide profile details or a profile image', 400);
+    }
+
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) return errorResponse(res, 'Admin not found', 404);
+
+    if (fullName !== undefined) admin.fullName = fullName;
+    if (email !== undefined) admin.email = email;
+    if (req.file) admin.profileImage = req.file.path;
+
+    await admin.save();
+    return successResponse(res, admin.toSafeObject(), 'Profile updated successfully');
+  } catch (error) {
+    console.error('Update profile error:', error);
+    if (error.code === 11000) {
+      return errorResponse(res, 'An admin with this email already exists', 409);
+    }
+    if (error.name === 'ValidationError') {
+      return errorResponse(res, Object.values(error.errors).map(item => item.message).join(', '), 400);
+    }
+    return errorResponse(res, 'Server error while updating profile', 500);
+  }
+};
+
+/**
  * @desc    Update admin password
  * @route   PUT /api/auth/password
  * @access  Private

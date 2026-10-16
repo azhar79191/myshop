@@ -16,7 +16,8 @@ const faqSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['General', 'Products', 'Orders', 'Usage', 'Shipping'],
+      trim: true,
+      maxlength: [50, 'Category cannot exceed 50 characters'],
       default: 'General',
     },
     order: {

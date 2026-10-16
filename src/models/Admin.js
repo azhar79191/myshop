@@ -35,6 +35,10 @@ const adminSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, 'Full name cannot exceed 100 characters'],
     },
+    profileImage: {
+      type: String,
+      default: '',
+    },
     role: {
       type: String,
       enum: ['admin', 'superadmin'],

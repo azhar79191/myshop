@@ -24,4 +24,13 @@ export const storage = new CloudinaryStorage({
   },
 });
 
+export const profileStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'bismillah-spray-center/admin-profiles',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }],
+  },
+});
+
 export default cloudinary;

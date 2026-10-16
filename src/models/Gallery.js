@@ -19,7 +19,8 @@ const gallerySchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['Products', 'Store', 'Events', 'Team', 'Other'],
+      trim: true,
+      maxlength: [50, 'Category cannot exceed 50 characters'],
       default: 'Other',
     },
     order: {
