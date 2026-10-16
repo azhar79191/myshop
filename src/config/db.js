@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { validateEnvironment } from './environment.js';
 
 /**
  * Connect to MongoDB database
@@ -6,10 +7,7 @@ import mongoose from 'mongoose';
  */
 export const connectDB = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI?.trim();
-    if (!mongoUri) {
-      throw new Error('MONGODB_URI is not set. Add it to the backend .env file.');
-    }
+    const { mongoUri } = validateEnvironment();
 
     // Optimized connection options for performance
     const options = {

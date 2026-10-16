@@ -1,7 +1,8 @@
+import './config/environment.js';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import compression from 'compression';
+import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
@@ -11,17 +12,13 @@ import brandRoutes from './routes/brandRoutes.js';
 import serviceRequestRoutes from './routes/serviceRequestRoutes.js';
 import testimonialRoutes from './routes/testimonialRoutes.js';
 import siteSettingsRoutes from './routes/siteSettingsRoutes.js';
+import { cachePolicyMiddleware } from './middleware/cachePolicyMiddleware.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
-
-dotenv.config();
 
 const app = express();
 
 // Enable ETag support for cache validation
-app.set('etag', 'strong')
-
-// Enable ETag support for cache validation
-app.set('etag', 'strong')
+app.set('etag', 'strong');
 
 // Enable compression for all responses
 app.use(compression({
@@ -36,18 +33,19 @@ app.use(compression({
 }));
 
 // CORS configuration
-const allowedOrigins = [
+const allowedOrigins = new Set([
   'https://bismillahspraycenter.vercel.app',
   'http://localhost:5173',
-  'http://localhost:3000'
-];
+  'http://localhost:3000',
+  ...(process.env.FRONTEND_URL || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+]);
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    if (allowedOrigins.has(origin) || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -69,34 +67,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Disable x-powered-by header for security
 app.disable('x-powered-by');
 
-// Set cache headers for static responses
-app.use((req, res, next) => {
-  if (req.method === 'GET' && !req.path.includes('/admin')) {
-    const path = req.path
-    if (path.includes('/categories') || path.includes('/brands/all')) {
-      // Categories & brand names — rarely change, cache 1hr client / 6hr CDN
-      res.set('Cache-Control', 'public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400')
-    } else if (path.includes('/products/featured')) {
-      // Featured products — cache 10min client / 30min CDN
-      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600')
-    } else if (path.includes('/products')) {
-      // Products list — cache 5min client / 15min CDN
-      res.set('Cache-Control', 'public, max-age=300, s-maxage=900, stale-while-revalidate=1800')
-    } else if (path.includes('/gallery') || path.includes('/faqs')) {
-      // Gallery & FAQs — cache 10min client / 30min CDN
-      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600')
-    } else if (path.includes('/testimonials')) {
-      // Testimonials — cache 15min client / 1hr CDN
-      res.set('Cache-Control', 'public, max-age=900, s-maxage=3600, stale-while-revalidate=7200')
-    } else if (path.includes('/brands')) {
-      // Full brands list with logos — cache 10min
-      res.set('Cache-Control', 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600')
-    } else {
-      res.set('Cache-Control', 'public, max-age=60, s-maxage=300')
-    }
-  }
-  next()
-})
+app.use(cachePolicyMiddleware);
 
 // Request logger
 app.use((req, res, next) => {
@@ -116,9 +87,14 @@ app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Bismillah Spray Center API is running',
+  const databaseConnected = mongoose.connection.readyState === 1;
+  res.status(databaseConnected ? 200 : 503).json({
+    success: databaseConnected,
+    status: databaseConnected ? 'ok' : 'degraded',
+    database: databaseConnected ? 'connected' : 'disconnected',
+    message: databaseConnected
+      ? 'Bismillah Spray Center API is running'
+      : 'Bismillah Spray Center API database is unavailable',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     uptime: process.uptime(),

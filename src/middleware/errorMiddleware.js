@@ -62,6 +62,10 @@ export const errorHandler = (err, req, res, next) => {
     return errorResponse(res, message, statusCode);
   }
 
+  if (statusCode >= 500 && process.env.NODE_ENV === 'production') {
+    message = 'Internal Server Error';
+  }
+
   // Log error in development
   if (process.env.NODE_ENV === 'development') {
     console.error('Error:', err);

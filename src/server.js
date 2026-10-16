@@ -1,17 +1,15 @@
-import dotenv from 'dotenv';
 import https from 'https';
+import { validateEnvironment } from './config/environment.js';
 import app from './app.js';
 import { connectDB } from './config/db.js';
-
-dotenv.config();
-
-const PORT = process.env.PORT || 5000;
 
 /**
  * Start server after database connection
  */
 const startServer = async () => {
   try {
+    const environment = validateEnvironment();
+
     // Connect to MongoDB
     await connectDB();
 
@@ -28,8 +26,8 @@ const startServer = async () => {
     }
 
     // Start Express server
-    const server = app.listen(PORT, () => {
-      const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+    const server = app.listen(environment.port, () => {
+      const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${environment.port}`;
       console.log(`\n🚀 Server running in ${process.env.NODE_ENV || 'development'} mode`);
       console.log(`📡 API URL: ${baseUrl}/api`);
       console.log(`🔍 Health Check: ${baseUrl}/api/health\n`);

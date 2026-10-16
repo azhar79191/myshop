@@ -6,43 +6,38 @@ import { errorResponse } from '../utils/apiResponse.js';
  * Protect routes - verify JWT token
  */
 export const protect = async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return errorResponse(res, 'Not authorized to access this route', 401);
+  }
+
+  let decoded;
   try {
-    let token;
-
-    // Check for token in Authorization header
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
-    ) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    // Check if token exists
-    if (!token) {
-      return errorResponse(res, 'Not authorized to access this route', 401);
-    }
-
-    try {
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Get admin from token
-      req.admin = await Admin.findById(decoded.id).select('-password');
-
-      if (!req.admin) {
-        return errorResponse(res, 'Admin not found', 401);
-      }
-
-      if (!req.admin.isActive) {
-        return errorResponse(res, 'Admin account is deactivated', 401);
-      }
-
-      next();
-    } catch (error) {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    if (['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(error.name)) {
       return errorResponse(res, 'Not authorized, token failed', 401);
     }
+    return next(error);
+  }
+
+  try {
+    const admin = await Admin.findById(decoded.id).select('-password');
+    if (!admin) return errorResponse(res, 'Admin not found', 401);
+    if (!admin.isActive) return errorResponse(res, 'Admin account is deactivated', 401);
+
+    req.admin = admin;
+    return next();
   } catch (error) {
-    return errorResponse(res, 'Server error in authentication', 500);
+    return next(error);
   }
 };
 

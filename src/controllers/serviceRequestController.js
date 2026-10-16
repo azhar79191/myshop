@@ -1,5 +1,6 @@
 import ServiceRequest from '../models/ServiceRequest.js';
 import { successResponse, errorResponse, paginateResponse } from '../utils/apiResponse.js';
+import { getPagination } from '../utils/pagination.js';
 
 /**
  * @desc    Submit service request
@@ -37,14 +38,12 @@ export const submitServiceRequest = async (req, res, next) => {
  */
 export const getAllServiceRequests = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status } = req.query;
+    const { status } = req.query;
 
     const filter = {};
     if (status) filter.status = status;
 
-    const pageNum = Math.max(1, parseInt(page, 10));
-    const limitNum = Math.max(1, Math.min(50, parseInt(limit, 10)));
-    const skip = (pageNum - 1) * limitNum;
+    const { page: pageNum, limit: limitNum, skip } = getPagination(req.query.page, req.query.limit);
 
     const [requests, total] = await Promise.all([
       ServiceRequest.find(filter).sort('-createdAt').skip(skip).limit(limitNum),

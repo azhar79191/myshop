@@ -1,6 +1,7 @@
 import Product from '../models/Product.js';
 import { successResponse, errorResponse, paginateResponse, asyncHandler } from '../utils/apiResponse.js';
 import { fileToCloudinaryUrl, filesToCloudinaryUrls, isValidBase64Image } from '../middleware/uploadMiddleware.js';
+import { getPagination } from '../utils/pagination.js';
 
 /**
  * @desc    Get all products with filtering, sorting, and pagination
@@ -9,8 +10,6 @@ import { fileToCloudinaryUrl, filesToCloudinaryUrls, isValidBase64Image } from '
  */
 export const getProducts = asyncHandler(async (req, res) => {
   const {
-    page = 1,
-    limit = 12,
     sort = '-createdAt',
     category,
     brand,
@@ -50,10 +49,7 @@ export const getProducts = asyncHandler(async (req, res) => {
     if (maxPrice) filter['sizes.price'].$lte = Number(maxPrice);
   }
 
-  // Pagination
-  const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.max(1, Math.min(50, parseInt(limit, 10)));
-  const skip = (pageNum - 1) * limitNum;
+  const { page: pageNum, limit: limitNum, skip } = getPagination(req.query.page, req.query.limit, 12);
 
   // Execute query with field selection to reduce payload size
   const [products, total] = await Promise.all([
