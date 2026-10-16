@@ -1,5 +1,5 @@
 import multer from 'multer';
-import { storage as cloudinaryStorage, profileStorage } from '../config/cloudinary.js';
+import { storage as cloudinaryStorage, profileStorage, siteLogoStorage } from '../config/cloudinary.js';
 
 // File filter for images
 const fileFilter = (req, file, cb) => {
@@ -28,6 +28,14 @@ const profileUpload = multer({
 });
 
 export const uploadProfileImage = profileUpload.single('image');
+
+const siteLogoUpload = multer({
+  storage: siteLogoStorage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+export const uploadSiteLogoImage = siteLogoUpload.single('image');
 
 export const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {

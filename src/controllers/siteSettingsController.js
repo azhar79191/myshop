@@ -67,3 +67,21 @@ export const updateSiteSettings = asyncHandler(async (req, res) => {
 
   return successResponse(res, record.settings, 'Site settings updated successfully');
 });
+
+export const uploadSiteLogo = asyncHandler(async (req, res) => {
+  if (!req.file) return errorResponse(res, 'Please provide a website logo image', 400);
+
+  const record = await SiteSettings.findOne({ key: 'global' });
+  const settings = {
+    ...defaultSiteSettings,
+    ...(record?.settings || {}),
+    siteLogo: req.file.path,
+  };
+  const updatedRecord = await SiteSettings.findOneAndUpdate(
+    { key: 'global' },
+    { $set: { settings } },
+    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+  ).lean();
+
+  return successResponse(res, updatedRecord.settings, 'Website logo uploaded successfully');
+});

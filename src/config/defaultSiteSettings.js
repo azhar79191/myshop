@@ -1,6 +1,7 @@
 const defaultSiteSettings = {
   siteName: 'Bismillah Spray Center',
   tagline: 'Premium Agricultural Solutions for Pakistan',
+  siteLogo: '',
   contact: {
     whatsapp: '923001331616',
     phone: '+923001331616',
