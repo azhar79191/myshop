@@ -24,6 +24,7 @@ const defaultSiteSettings = {
     primary: '#1A3C2A',
     accent: '#E9A825',
   },
+  media: { allowVideoUploads: true, maxVideoSizeMB: 100 },
   services: [
     { title: 'Crop Consultation', description: 'Sit down with our agronomists and get a season-long plan built around your soil, your crop, and the pests you actually face — not generic advice.', icon: 'GiFarmer' },
     { title: 'Pest Identification', description: 'Bring in a leaf, a photo, or a sample and we’ll name the pest or disease on the spot, then hand you the exact product and dose to stop it.', icon: 'GiMicroscope' },

@@ -1,3 +1,4 @@
+import { MEDIA_MAX_VIDEO_MB } from '../config/media.js';
 import SiteSettings from '../models/SiteSettings.js';
 import defaultSiteSettings from '../config/defaultSiteSettings.js';
 import { successResponse, errorResponse, asyncHandler } from '../utils/apiResponse.js';
@@ -15,6 +16,13 @@ const validateSettings = (settings) => {
   )) {
     return 'Theme colors must be six-digit hex colors';
   }
+
+  if (settings.media !== undefined && (
+    typeof settings.media !== 'object' || settings.media === null ||
+    typeof settings.media.allowVideoUploads !== 'boolean' ||
+    !Number.isInteger(settings.media.maxVideoSizeMB) ||
+    settings.media.maxVideoSizeMB < 1 || settings.media.maxVideoSizeMB > MEDIA_MAX_VIDEO_MB
+  )) return `Media settings require a video limit from 1 to ${MEDIA_MAX_VIDEO_MB}MB and a video upload toggle`;
 
   const arrays = [
     ['businessHours', 14],
@@ -58,6 +66,7 @@ export const updateSiteSettings = asyncHandler(async (req, res) => {
     theme: { ...defaultSiteSettings.theme, ...req.body.theme },
     categories: { ...defaultSiteSettings.categories, ...req.body.categories },
     homeContent: { ...defaultSiteSettings.homeContent, ...req.body.homeContent },
+    media: { ...defaultSiteSettings.media, ...req.body.media },
   };
   const record = await SiteSettings.findOneAndUpdate(
     { key: 'global' },

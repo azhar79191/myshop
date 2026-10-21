@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import faqRoutes from './routes/faqRoutes.js';
+import { MEDIA_UPLOAD_DIR } from './config/media.js';
 import galleryRoutes from './routes/galleryRoutes.js';
 import brandRoutes from './routes/brandRoutes.js';
 import serviceRequestRoutes from './routes/serviceRequestRoutes.js';
@@ -53,7 +54,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
   optionsSuccessStatus: 200,
   maxAge: 86400 // Cache preflight requests for 24 hours
 };
@@ -107,7 +108,12 @@ app.use('/api/site-settings', siteSettingsRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/faqs', faqRoutes);
-app.use('/api/gallery', galleryRoutes);
+app.use('/api/media', galleryRoutes);
+app.use('/api/gallery', galleryRoutes); // Compatibility for existing clients
+app.use('/uploads/media', express.static(MEDIA_UPLOAD_DIR, {
+  acceptRanges: true, dotfiles: 'deny', index: false, maxAge: '1d',
+  setHeaders: res => { res.set('X-Content-Type-Options', 'nosniff'); },
+}));
 app.use('/api/brands', brandRoutes);
 app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/testimonials', testimonialRoutes);

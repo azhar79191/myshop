@@ -1,21 +1,15 @@
-import express from 'express';
-import {
-  getAllGalleryImages,
-  getGalleryImageById,
-  createGalleryImage,
-  updateGalleryImage,
-  deleteGalleryImage,
-} from '../controllers/galleryController.js';
+﻿import express from 'express';
+import { getAllGalleryImages, getGalleryImageById, createGalleryImage, updateGalleryImage, deleteGalleryImage } from '../controllers/galleryController.js';
 import { protect } from '../middleware/authMiddleware.js';
-import { uploadSingle, handleUploadError } from '../middleware/uploadMiddleware.js';
-
+import { loadMediaPolicy, uploadMedia } from '../middleware/mediaUploadMiddleware.js';
 const router = express.Router();
-
+const adminView = (req, res, next) => { req.mediaAdmin = true; next(); };
+router.get('/upload-policy', protect, loadMediaPolicy, (req, res) => res.json({ success: true, data: req.mediaPolicy }));
+router.get('/admin', protect, adminView, getAllGalleryImages);
+router.get('/admin/:id', protect, adminView, getGalleryImageById);
 router.get('/', getAllGalleryImages);
 router.get('/:id', getGalleryImageById);
-
-router.post('/', protect, uploadSingle, handleUploadError, createGalleryImage);
-router.put('/:id', protect, uploadSingle, handleUploadError, updateGalleryImage);
+router.post('/', protect, loadMediaPolicy, uploadMedia, createGalleryImage);
+router.put('/:id', protect, loadMediaPolicy, uploadMedia, updateGalleryImage);
 router.delete('/:id', protect, deleteGalleryImage);
-
 export default router;

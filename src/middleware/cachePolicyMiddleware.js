@@ -7,6 +7,8 @@ export const getCacheControl = (path, method = 'GET', hasAuthorization = false) 
 
   if (
     NO_STORE_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`)) ||
+    path.startsWith('/api/media/admin') || path.startsWith('/api/media/upload-policy') ||
+    path.startsWith('/api/gallery/admin') || path.startsWith('/api/gallery/upload-policy') ||
     path === '/api/site-settings' ||
     path.startsWith('/api/site-settings/')
   ) {
@@ -25,7 +27,7 @@ export const getCacheControl = (path, method = 'GET', hasAuthorization = false) 
     return 'public, max-age=300, s-maxage=900, stale-while-revalidate=1800';
   }
 
-  if (path.startsWith('/api/gallery') || path.startsWith('/api/faqs')) {
+  if (path.startsWith('/api/media') || path.startsWith('/api/gallery') || path.startsWith('/api/faqs')) {
     return 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600';
   }
 
