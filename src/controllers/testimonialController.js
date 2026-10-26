@@ -1,5 +1,6 @@
 import Testimonial from '../models/Testimonial.js';
 import { successResponse, errorResponse, paginateResponse } from '../utils/apiResponse.js';
+import { getPagination } from '../utils/pagination.js';
 
 /**
  * @desc    Submit testimonial/feedback
@@ -48,7 +49,7 @@ export const getApprovedTestimonials = async (req, res, next) => {
     const filter = { isApproved: true };
     if (featured === 'true') filter.isFeatured = true;
 
-    const limitNum = Math.max(1, Math.min(50, parseInt(limit, 10)));
+    const { limit: limitNum } = getPagination(1, limit, 10);
 
     const testimonials = await Testimonial.find(filter)
       .sort({ isFeatured: -1, rating: -1, createdAt: -1 })
@@ -69,14 +70,18 @@ export const getApprovedTestimonials = async (req, res, next) => {
 export const getAllTestimonials = async (req, res, next) => {
   try {
     const { page = 1, limit = 20, isApproved, rating } = req.query;
+    if (isApproved !== undefined && !['true', 'false'].includes(isApproved)) {
+      return errorResponse(res, 'isApproved must be true or false', 400);
+    }
+    if (rating !== undefined && (typeof rating !== 'string' || !Number.isFinite(Number(rating)) || Number(rating) < 1 || Number(rating) > 5)) {
+      return errorResponse(res, 'Rating must be between 1 and 5', 400);
+    }
 
     const filter = {};
     if (isApproved !== undefined) filter.isApproved = isApproved === 'true';
-    if (rating) filter.rating = parseInt(rating, 10);
+    if (rating) filter.rating = Number(rating);
 
-    const pageNum = Math.max(1, parseInt(page, 10));
-    const limitNum = Math.max(1, Math.min(50, parseInt(limit, 10)));
-    const skip = (pageNum - 1) * limitNum;
+    const { page: pageNum, limit: limitNum, skip } = getPagination(page, limit);
 
     const [testimonials, total] = await Promise.all([
       Testimonial.find(filter).sort('-createdAt').skip(skip).limit(limitNum),
@@ -123,17 +128,24 @@ export const getTestimonialById = async (req, res, next) => {
 export const approveTestimonial = async (req, res, next) => {
   try {
     const { isApproved, isFeatured } = req.body;
+    if ([isApproved, isFeatured].some(value => value !== undefined && typeof value !== 'boolean')) {
+      return errorResponse(res, 'Approval and featured flags must be booleans', 400);
+    }
 
     const updateData = {
       isApproved: isApproved !== undefined ? isApproved : true,
     };
 
-    if (isApproved && req.user && req.user._id) {
-      updateData.approvedBy = req.user._id;
+    if (updateData.isApproved) {
+      updateData.approvedBy = req.admin._id;
       updateData.approvedAt = new Date();
+    } else {
+      updateData.approvedBy = null;
+      updateData.approvedAt = null;
+      updateData.isFeatured = false;
     }
 
-    if (isFeatured !== undefined) {
+    if (isFeatured !== undefined && updateData.isApproved) {
       updateData.isFeatured = isFeatured;
     }
 
@@ -147,7 +159,7 @@ export const approveTestimonial = async (req, res, next) => {
       return errorResponse(res, 'Testimonial not found', 404);
     }
 
-    successResponse(res, testimonial, `Testimonial ${isApproved ? 'approved' : 'rejected'} successfully`);
+    successResponse(res, testimonial, `Testimonial ${updateData.isApproved ? 'approved' : 'rejected'} successfully`);
   } catch (error) {
     next(error);
   }

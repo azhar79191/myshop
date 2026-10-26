@@ -51,6 +51,11 @@ const adminSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -68,6 +73,7 @@ adminSchema.pre('save', async function (next) {
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    if (!this.isNew) this.tokenVersion = (this.tokenVersion || 0) + 1;
     next();
   } catch (error) {
     next(error);
@@ -87,6 +93,7 @@ adminSchema.methods.comparePassword = async function (candidatePassword) {
 adminSchema.methods.toSafeObject = function () {
   const admin = this.toObject();
   delete admin.password;
+  delete admin.tokenVersion;
   return admin;
 };
 

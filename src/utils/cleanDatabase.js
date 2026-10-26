@@ -40,7 +40,7 @@ const cleanDatabase = async () => {
     }
 
     console.log('\n✨ Database cleaned successfully!');
-    console.log('You can now run: npm run seed\n');
+    console.log('Add new products and FAQs through the admin CMS.\n');
 
     await disconnectDB();
     process.exit(0);

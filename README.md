@@ -4,7 +4,7 @@ Express and MongoDB API used by the Bismillah Spray Center public website and pr
 
 ## Requirements
 
-- Node.js 18 or newer
+- Node.js 22 or newer (the installed MongoDB driver requires at least 20.19)
 - npm
 - MongoDB local or Atlas connection
 
@@ -33,6 +33,20 @@ npm run dev
 ```
 
 ## Checks and health
+
+### Initial administrator
+
+Set `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_FULL_NAME` in the environment, then run `npm run seed:admin`. The password must have at least 12 characters. This creates a superadmin and refuses to overwrite an existing account. Remove the bootstrap password from the environment afterward. Products, brands, gallery entries, contacts, and FAQs are managed through the CMS; obsolete seed commands have been removed.
+
+### Sessions and request limits
+
+Passwords invalidate previously issued sessions. The password-change response includes a replacement token for the current browser. New tokens default to one hour unless `JWT_EXPIRE` overrides it. Login accepts 10 attempts per IP per 15 minutes; public contact, service-request, and testimonial submissions share a 20-request allowance. Limits are bounded in memory per API process and reset on restart. Multiple API instances need a shared rate-limit store.
+
+Set `TRUST_PROXY_HOPS` to the exact number of trusted reverse proxies (default `0`, Render configuration `1`). Do not enable arbitrary forwarded-header trust. Cloudinary image retirement runs after database updates and retries deletion three times; exhausted retries are logged for operational follow-up.
+
+### Automated checks
+
+Authenticated admins can read the last 20 settings/logo saves at `GET /api/site-settings/history`. Each entry records the server time and authenticated admin's identity. Public settings responses do not include this history. Existing installations start recording history with their next save; earlier edits are not reconstructed.
 
 ```powershell
 npm test

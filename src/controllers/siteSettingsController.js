@@ -5,6 +5,18 @@ import { successResponse, errorResponse, asyncHandler } from '../utils/apiRespon
 
 const isHexColor = (value) => typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
 
+const historyEntry = (req, action) => ({
+  savedAt: new Date(),
+  savedBy: req.admin._id,
+  name: req.admin.fullName || req.admin.username,
+  action,
+});
+
+export const getSiteSettingsHistory = asyncHandler(async (req, res) => {
+  const record = await SiteSettings.findOne({ key: 'global' }).select('history').lean();
+  return successResponse(res, [...(record?.history || [])].reverse(), 'Settings history retrieved successfully');
+});
+
 const validateSettings = (settings) => {
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
     return 'Settings payload must be an object';
@@ -57,10 +69,12 @@ export const getSiteSettings = asyncHandler(async (req, res) => {
 export const updateSiteSettings = asyncHandler(async (req, res) => {
   const validationError = validateSettings(req.body);
   if (validationError) return errorResponse(res, validationError, 400);
+  const suppliedSettings = Object.fromEntries(Object.keys(defaultSiteSettings)
+    .filter(key => req.body[key] !== undefined).map(key => [key, req.body[key]]));
 
   const settings = {
     ...defaultSiteSettings,
-    ...req.body,
+    ...suppliedSettings,
     contact: { ...defaultSiteSettings.contact, ...req.body.contact },
     social: { ...defaultSiteSettings.social, ...req.body.social },
     theme: { ...defaultSiteSettings.theme, ...req.body.theme },
@@ -70,7 +84,7 @@ export const updateSiteSettings = asyncHandler(async (req, res) => {
   };
   const record = await SiteSettings.findOneAndUpdate(
     { key: 'global' },
-    { $set: { settings } },
+    { $set: { settings }, $push: { history: { $each: [historyEntry(req, 'settings')], $slice: -20 } } },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   ).lean();
 
@@ -88,7 +102,7 @@ export const uploadSiteLogo = asyncHandler(async (req, res) => {
   };
   const updatedRecord = await SiteSettings.findOneAndUpdate(
     { key: 'global' },
-    { $set: { settings } },
+    { $set: { settings }, $push: { history: { $each: [historyEntry(req, 'logo')], $slice: -20 } } },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   ).lean();
 

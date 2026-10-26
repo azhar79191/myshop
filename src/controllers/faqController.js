@@ -1,6 +1,10 @@
 import FAQ from '../models/FAQ.js';
 import { successResponse, errorResponse, asyncHandler } from '../utils/apiResponse.js';
 
+const faqFields = body => Object.fromEntries(
+  ['question', 'answer', 'category', 'order', 'isActive'].filter(key => body[key] !== undefined).map(key => [key, body[key]])
+);
+
 /**
  * @desc    Get all FAQs
  * @route   GET /api/faqs
@@ -35,7 +39,7 @@ export const getFAQById = asyncHandler(async (req, res) => {
  * @access  Admin
  */
 export const createFAQ = asyncHandler(async (req, res) => {
-  const faq = await FAQ.create(req.body);
+  const faq = await FAQ.create(faqFields(req.body));
   return successResponse(res, faq, 'FAQ created successfully', 201);
 });
 
@@ -45,7 +49,7 @@ export const createFAQ = asyncHandler(async (req, res) => {
  * @access  Admin
  */
 export const updateFAQ = asyncHandler(async (req, res) => {
-  const faq = await FAQ.findByIdAndUpdate(req.params.id, req.body, {
+  const faq = await FAQ.findByIdAndUpdate(req.params.id, faqFields(req.body), {
     new: true,
     runValidators: true,
   });

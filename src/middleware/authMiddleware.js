@@ -21,7 +21,7 @@ export const protect = async (req, res, next) => {
 
   let decoded;
   try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
+    decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
   } catch (error) {
     if (['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(error.name)) {
       return errorResponse(res, 'Not authorized, token failed', 401);
@@ -30,9 +30,12 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const admin = await Admin.findById(decoded.id).select('-password');
+    const admin = await Admin.findById(decoded.id).select('-password +tokenVersion');
     if (!admin) return errorResponse(res, 'Admin not found', 401);
     if (!admin.isActive) return errorResponse(res, 'Admin account is deactivated', 401);
+    if ((decoded.version || 0) !== (admin.tokenVersion || 0)) {
+      return errorResponse(res, 'Session expired. Please login again.', 401);
+    }
 
     req.admin = admin;
     return next();
@@ -55,8 +58,9 @@ export const superAdminOnly = (req, res, next) => {
 /**
  * Generate JWT token
  */
-export const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '30d',
+export const generateToken = (id, version = 0) => {
+  return jwt.sign({ id, version }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || '1h',
+    algorithm: 'HS256',
   });
 };

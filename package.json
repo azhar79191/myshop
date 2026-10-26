@@ -8,11 +8,7 @@
     "start": "node src/server.js",
     "dev": "nodemon",
     "test": "node --test",
-    "seed": "node src/utils/seedData.js",
     "seed:admin": "node src/utils/seedAdmin.js",
-    "seed:contacts": "node src/utils/seedContacts.js",
-    "seed:gallery": "node src/utils/seedGallery.js",
-    "seed:brands": "node src/utils/seedBrands.js",
     "clean": "node src/utils/cleanDatabase.js",
     "migrate:images": "node src/utils/migrateImagesToCloudinary.js"
   },

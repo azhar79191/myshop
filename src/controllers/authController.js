@@ -12,12 +12,12 @@ export const login = async (req, res) => {
     const { username, password } = req.body;
 
     // Validate input
-    if (!username || !password) {
+    if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password) {
       return errorResponse(res, 'Please provide username and password', 400);
     }
 
     // Find admin and include password
-    const admin = await Admin.findOne({ username }).select('+password');
+    const admin = await Admin.findOne({ username: username.trim().toLowerCase() }).select('+password +tokenVersion');
 
     if (!admin) {
       return errorResponse(res, 'Invalid credentials', 401);
@@ -40,7 +40,7 @@ export const login = async (req, res) => {
     await admin.save();
 
     // Generate token
-    const token = generateToken(admin._id);
+    const token = generateToken(admin._id, admin.tokenVersion);
 
     // Return response
     return successResponse(
@@ -114,7 +114,7 @@ export const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    if (!currentPassword || !newPassword) {
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || !currentPassword || !newPassword) {
       return errorResponse(res, 'Please provide current and new password', 400);
     }
 
@@ -123,7 +123,7 @@ export const updatePassword = async (req, res) => {
     }
 
     // Get admin with password
-    const admin = await Admin.findById(req.admin._id).select('+password');
+    const admin = await Admin.findById(req.admin._id).select('+password +tokenVersion');
 
     // Check current password
     const isMatch = await admin.comparePassword(currentPassword);
@@ -136,7 +136,7 @@ export const updatePassword = async (req, res) => {
     admin.password = newPassword;
     await admin.save();
 
-    return successResponse(res, null, 'Password updated successfully');
+    return successResponse(res, { token: generateToken(admin._id, admin.tokenVersion) }, 'Password updated successfully');
   } catch (error) {
     console.error('Update password error:', error);
     return errorResponse(res, 'Server error', 500);
@@ -205,6 +205,7 @@ export const getAllAdmins = async (req, res) => {
 export const updateAdminStatus = async (req, res) => {
   try {
     const { isActive } = req.body;
+    if (typeof isActive !== 'boolean') return errorResponse(res, 'isActive must be a boolean', 400);
 
     const admin = await Admin.findById(req.params.id);
 

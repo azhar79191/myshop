@@ -1,7 +1,7 @@
 import Brand from '../models/Brand.js';
-import { v2 as cloudinary } from 'cloudinary';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { fileToCloudinaryUrl } from '../middleware/uploadMiddleware.js';
+import { retireCloudinaryImages } from '../utils/cloudinaryAssets.js';
 
 /**
  * @desc    Get all brands
@@ -52,11 +52,15 @@ export const createBrand = async (req, res, next) => {
     const { name, description, website, country, order, isActive } = req.body;
     const logo = fileToCloudinaryUrl(req.file) || req.body.logo;
 
-    if (!name || !logo) return errorResponse(res, 'Name and logo are required', 400);
+    if (!name || !logo) {
+      if (req.file) await retireCloudinaryImages([req.file.path]);
+      return errorResponse(res, 'Name and logo are required', 400);
+    }
 
     const newBrand = await Brand.create({ name, description, logo, website, country, order, isActive });
     successResponse(res, newBrand, 'Brand created successfully', 201);
   } catch (error) {
+    if (req.file) await retireCloudinaryImages([req.file.path]);
     next(error);
   }
 };
@@ -70,7 +74,11 @@ export const updateBrand = async (req, res, next) => {
   try {
     const { name, description, website, country, order, isActive } = req.body;
     const brand = await Brand.findById(req.params.id);
-    if (!brand) return errorResponse(res, 'Brand not found', 404);
+    if (!brand) {
+      if (req.file) await retireCloudinaryImages([req.file.path]);
+      return errorResponse(res, 'Brand not found', 404);
+    }
+    const previousLogo = brand.logo;
 
     if (name !== undefined) brand.name = name;
     if (description !== undefined) brand.description = description;
@@ -80,18 +88,16 @@ export const updateBrand = async (req, res, next) => {
     if (isActive !== undefined) brand.isActive = isActive;
 
     if (req.file) {
-      if (brand.logo && brand.logo.includes('cloudinary')) {
-        const publicId = brand.logo.split('/').slice(-2).join('/').split('.')[0];
-        await cloudinary.uploader.destroy(publicId);
-      }
       brand.logo = fileToCloudinaryUrl(req.file);
     } else if (req.body.logo) {
       brand.logo = req.body.logo;
     }
 
     const updatedBrand = await brand.save();
+    if (previousLogo !== updatedBrand.logo) await retireCloudinaryImages([previousLogo]);
     successResponse(res, updatedBrand, 'Brand updated successfully');
   } catch (error) {
+    if (req.file) await retireCloudinaryImages([req.file.path]);
     next(error);
   }
 };
@@ -106,12 +112,8 @@ export const deleteBrand = async (req, res, next) => {
     const brand = await Brand.findById(req.params.id);
     if (!brand) return errorResponse(res, 'Brand not found', 404);
 
-    if (brand.logo && brand.logo.includes('cloudinary')) {
-      const publicId = brand.logo.split('/').slice(-2).join('/').split('.')[0];
-      await cloudinary.uploader.destroy(publicId);
-    }
-
     await brand.deleteOne();
+    await retireCloudinaryImages([brand.logo]);
     successResponse(res, null, 'Brand deleted successfully');
   } catch (error) {
     next(error);

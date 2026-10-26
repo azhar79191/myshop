@@ -15,8 +15,10 @@ import testimonialRoutes from './routes/testimonialRoutes.js';
 import siteSettingsRoutes from './routes/siteSettingsRoutes.js';
 import { cachePolicyMiddleware } from './middleware/cachePolicyMiddleware.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
+import { loginRateLimit, submissionRateLimit } from './middleware/rateLimitMiddleware.js';
 
 const app = express();
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 0));
 
 // Enable ETag support for cache validation
 app.set('etag', 'strong');
@@ -103,6 +105,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
+app.post('/api/auth/login', loginRateLimit);
+app.post(['/api/contact', '/api/service-requests', '/api/testimonials'], submissionRateLimit);
 app.use('/api/auth', authRoutes);
 app.use('/api/site-settings', siteSettingsRoutes);
 app.use('/api/products', productRoutes);

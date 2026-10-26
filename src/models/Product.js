@@ -105,7 +105,7 @@ productSchema.index({ stockStatus: 1 }); // For stock filtering
 
 // Pre-save middleware to generate slug
 productSchema.pre('save', function (next) {
-  if (this.isModified('name')) {
+  if (!this.slug && this.isModified('name')) {
     this.slug = this.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')

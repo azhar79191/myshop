@@ -1,7 +1,9 @@
 import Product from '../models/Product.js';
 import { successResponse, errorResponse, paginateResponse, asyncHandler } from '../utils/apiResponse.js';
-import { fileToCloudinaryUrl, filesToCloudinaryUrls, isValidBase64Image } from '../middleware/uploadMiddleware.js';
+import { fileToCloudinaryUrl, filesToCloudinaryUrls } from '../middleware/uploadMiddleware.js';
 import { getPagination } from '../utils/pagination.js';
+import { buildProductQuery, productFields } from '../utils/productQuery.js';
+import { retireCloudinaryImages } from '../utils/cloudinaryAssets.js';
 
 /**
  * @desc    Get all products with filtering, sorting, and pagination
@@ -9,45 +11,7 @@ import { getPagination } from '../utils/pagination.js';
  * @access  Public
  */
 export const getProducts = asyncHandler(async (req, res) => {
-  const {
-    sort = '-createdAt',
-    category,
-    brand,
-    search,
-    minPrice,
-    maxPrice,
-    featured,
-    stockStatus,
-  } = req.query;
-
-  // Build filter object
-  const filter = {};
-
-  if (category) {
-    filter.category = category;
-  }
-
-  if (brand) {
-    filter.brand = { $regex: brand, $options: 'i' };
-  }
-
-  if (search) {
-    filter.$text = { $search: search };
-  }
-
-  if (featured === 'true') {
-    filter.featured = true;
-  }
-
-  if (stockStatus) {
-    filter.stockStatus = stockStatus;
-  }
-
-  if (minPrice || maxPrice) {
-    filter['sizes.price'] = {};
-    if (minPrice) filter['sizes.price'].$gte = Number(minPrice);
-    if (maxPrice) filter['sizes.price'].$lte = Number(maxPrice);
-  }
+  const { filter, sort } = buildProductQuery(req.query);
 
   const { page: pageNum, limit: limitNum, skip } = getPagination(req.query.page, req.query.limit, 12);
 
@@ -55,7 +19,7 @@ export const getProducts = asyncHandler(async (req, res) => {
   const [products, total] = await Promise.all([
     Product.find(filter)
       .select('-usage -__v') // Exclude large fields not needed in list view
-      .sort(sort)
+      .sort(`${sort} _id`)
       .skip(skip)
       .limit(limitNum)
       .lean(),
@@ -103,7 +67,7 @@ export const getProductById = asyncHandler(async (req, res) => {
  * @access  Public
  */
 export const getFeaturedProducts = asyncHandler(async (req, res) => {
-  const limit = Math.min(10, parseInt(req.query.limit, 10) || 6);
+  const limit = Math.min(10, getPagination(1, req.query.limit, 6).limit);
 
   const products = await Product.find({ featured: true, stockStatus: { $ne: 'Out of Stock' } })
     .select('-usage -__v') // Exclude large fields
@@ -140,13 +104,14 @@ export const getBrands = asyncHandler(async (req, res) => {
  * @access  Admin
  */
 export const createProduct = asyncHandler(async (req, res) => {
-  const productData = req.body;
+  const productData = productFields(req.body);
 
   // Parse sizes if it's a string
   if (typeof productData.sizes === 'string') {
     try {
       productData.sizes = JSON.parse(productData.sizes);
     } catch (error) {
+      if (req.file) await retireCloudinaryImages([req.file.path]);
       return errorResponse(res, 'Invalid sizes format', 400);
     }
   }
@@ -165,7 +130,13 @@ export const createProduct = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Product image is required', 400);
   }
 
-  const product = await Product.create(productData);
+  let product;
+  try {
+    product = await Product.create(productData);
+  } catch (error) {
+    if (req.file) await retireCloudinaryImages([req.file.path]);
+    throw error;
+  }
   return successResponse(res, product, 'Product created successfully', 201);
 });
 
@@ -176,13 +147,14 @@ export const createProduct = asyncHandler(async (req, res) => {
  */
 export const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const updateData = req.body;
+  const updateData = productFields(req.body);
 
   // Parse sizes if it's a string
   if (typeof updateData.sizes === 'string') {
     try {
       updateData.sizes = JSON.parse(updateData.sizes);
     } catch (error) {
+      if (req.file) await retireCloudinaryImages([req.file.path]);
       return errorResponse(res, 'Invalid sizes format', 400);
     }
   }
@@ -195,15 +167,22 @@ export const updateProduct = asyncHandler(async (req, res) => {
     updateData.images = filesToCloudinaryUrls(req.files);
   }
 
-  const product = await Product.findByIdAndUpdate(id, updateData, {
-    new: true,
-    runValidators: true,
-  });
-
+  const product = await Product.findById(id);
   if (!product) {
+    if (req.file) await retireCloudinaryImages([req.file.path]);
     return errorResponse(res, 'Product not found', 404);
   }
 
+  const oldImages = [product.image, ...product.images];
+  Object.assign(product, updateData);
+  try {
+    await product.save();
+  } catch (error) {
+    if (req.file) await retireCloudinaryImages([req.file.path]);
+    throw error;
+  }
+  const retainedImages = new Set([product.image, ...product.images]);
+  await retireCloudinaryImages(oldImages.filter(url => !retainedImages.has(url)));
   return successResponse(res, product, 'Product updated successfully');
 });
 
@@ -221,6 +200,7 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Product not found', 404);
   }
 
+  await retireCloudinaryImages([product.image, ...product.images]);
   return successResponse(res, null, 'Product deleted successfully');
 });
 
@@ -231,15 +211,17 @@ export const deleteProduct = asyncHandler(async (req, res) => {
  */
 export const getRelatedProducts = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const limit = Math.min(8, parseInt(req.query.limit, 10) || 4);
+  const limit = Math.min(8, getPagination(1, req.query.limit, 4).limit);
 
-  const product = await Product.findById(id).select('category brand').lean();
+  let product = /^[0-9a-fA-F]{24}$/.test(id) ? await Product.findById(id).select('category brand').lean() : null;
+  if (!product) product = await Product.findOne({ slug: id }).select('category brand').lean();
   if (!product) {
     return errorResponse(res, 'Product not found', 404);
   }
 
   const related = await Product.find({
-    _id: { $ne: id },
+    _id: { $ne: product._id },
+    stockStatus: { $ne: 'Out of Stock' },
     $or: [{ category: product.category }, { brand: product.brand }],
   })
     .select('-usage -__v') // Exclude large fields
