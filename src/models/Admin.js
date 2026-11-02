@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 
 const adminSchema = new mongoose.Schema(
   {
+    resetTokenHash: { type: String, select: false },
+    resetTokenExpires: { type: Date, select: false },
     username: {
       type: String,
       required: [true, 'Username is required'],
@@ -26,7 +28,7 @@ const adminSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
+      minlength: [12, 'Password must be at least 12 characters'],
       select: false, // Don't return password by default
     },
     fullName: {
@@ -92,6 +94,8 @@ adminSchema.methods.comparePassword = async function (candidatePassword) {
 // Method to get admin without sensitive data
 adminSchema.methods.toSafeObject = function () {
   const admin = this.toObject();
+  delete admin.resetTokenHash;
+  delete admin.resetTokenExpires;
   delete admin.password;
   delete admin.tokenVersion;
   return admin;

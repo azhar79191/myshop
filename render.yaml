@@ -7,6 +7,8 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
+      - key: MEDIA_STORAGE
+        value: cloudinary
       - key: NODE_ENV
         value: production
       - key: PORT

@@ -4,6 +4,7 @@ import cors from 'cors';
 import compression from 'compression';
 import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import faqRoutes from './routes/faqRoutes.js';
@@ -105,9 +106,10 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
-app.post('/api/auth/login', loginRateLimit);
+app.post(['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password'], loginRateLimit);
 app.post(['/api/contact', '/api/service-requests', '/api/testimonials'], submissionRateLimit);
 app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/site-settings', siteSettingsRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/contact', contactRoutes);

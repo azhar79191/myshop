@@ -1,4 +1,6 @@
 import Contact from '../models/Contact.js';
+import { leadFields, leadFilter } from '../utils/leadFields.js';
+import { notifyNewLead } from '../utils/notifications.js';
 import { successResponse, errorResponse, paginateResponse, asyncHandler } from '../utils/apiResponse.js';
 import { getPagination } from '../utils/pagination.js';
 
@@ -10,12 +12,18 @@ import { getPagination } from '../utils/pagination.js';
 export const submitContact = asyncHandler(async (req, res) => {
   const { name, email, phone, subject, message } = req.body;
 
+  if ([name, email, phone, subject, message].some(value => value !== undefined && typeof value !== 'string')) return errorResponse(res, 'Contact fields must be text', 400);
+  if (phone && !/^\+?[0-9]{7,15}$/.test(phone.replace(/[\s()-]/g, ''))) return errorResponse(res, 'Provide a valid phone number', 400);
+
   // Basic validation
-  if (!name || !email || !subject || !message) {
+  if (!name || !(email?.trim() || phone?.trim()) || !subject || !message) {
     return errorResponse(res, 'Please provide all required fields', 400);
   }
 
+  const channel = req.body.preferredContact || (phone?.trim() ? 'phone' : 'email');
+  if (!['phone', 'whatsapp', 'email'].includes(channel) || (channel === 'email' ? !email?.trim() : !phone?.trim())) return errorResponse(res, 'Provide contact details for your chosen reply method', 400);
   const contact = await Contact.create({
+    preferredContact: channel,
     name,
     email,
     phone,
@@ -24,7 +32,8 @@ export const submitContact = asyncHandler(async (req, res) => {
     ipAddress: req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress,
   });
 
-  return successResponse(res, contact, 'Message sent successfully. We will get back to you soon!', 201);
+  void notifyNewLead('contact', contact._id);
+  return successResponse(res, { reference: String(contact._id) }, 'Message sent successfully. We will get back to you soon!', 201);
 });
 
 /**
@@ -33,10 +42,7 @@ export const submitContact = asyncHandler(async (req, res) => {
  * @access  Admin
  */
 export const getContacts = asyncHandler(async (req, res) => {
-  const { status } = req.query;
-
-  const filter = {};
-  if (status) filter.status = status;
+  const filter = leadFilter(req.query, ['Replied', 'Archived']);
 
   const { page: pageNum, limit: limitNum, skip } = getPagination(req.query.page, req.query.limit);
 
@@ -74,10 +80,10 @@ export const getContactById = asyncHandler(async (req, res) => {
  * @access  Admin
  */
 export const updateContactStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const fields = await leadFields(req.body);
   const contact = await Contact.findByIdAndUpdate(
     req.params.id,
-    { status },
+    fields,
     { new: true, runValidators: true }
   );
 

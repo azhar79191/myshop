@@ -1,5 +1,5 @@
 export const productFields = body => Object.fromEntries(
-  ['name', 'description', 'category', 'brand', 'image', 'images', 'sizes', 'stockStatus', 'usage', 'featured']
+  ['name', 'description', 'category', 'brand', 'image', 'images', 'sizes', 'stockStatus', 'usage', 'featured', 'crops', 'activeIngredient', 'formulation', 'targetProblems', 'labelUrl', 'translations']
     .filter(key => body[key] !== undefined).map(key => [key, body[key]])
 );
 
@@ -9,10 +9,11 @@ const invalidQuery = message => {
 
 export const buildProductQuery = query => {
   const filter = {};
-  for (const key of ['category', 'brand', 'search', 'stockStatus', 'sort', 'featured', 'available', 'minPrice', 'maxPrice']) {
+  for (const key of ['crop', 'category', 'brand', 'search', 'stockStatus', 'sort', 'featured', 'available', 'minPrice', 'maxPrice']) {
     if (query[key] !== undefined && typeof query[key] !== 'string') invalidQuery(`${key} must be a string`);
     if (query[key]?.length > 200) invalidQuery(`${key} is too long`);
   }
+  if (query.crop) filter.crops = { $regex: `^${query.crop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' };
   if (query.category) filter.category = query.category;
   if (query.brand) filter.brand = query.brand;
   if (query.search?.trim()) {

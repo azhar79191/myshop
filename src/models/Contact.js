@@ -10,7 +10,6 @@ const contactSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
       trim: true,
       lowercase: true,
       match: [
@@ -23,6 +22,7 @@ const contactSchema = new mongoose.Schema(
       trim: true,
       maxlength: [20, 'Phone cannot exceed 20 characters'],
     },
+    preferredContact: { type: String, enum: ['phone', 'whatsapp', 'email'], default: 'phone' },
     subject: {
       type: String,
       required: [true, 'Subject is required'],
@@ -40,6 +40,9 @@ const contactSchema = new mongoose.Schema(
       enum: ['New', 'Read', 'Replied', 'Archived'],
       default: 'New',
     },
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+    internalNotes: { type: String, maxlength: 5000, default: '' },
+    followUpAt: { type: Date, default: null, index: true },
     ipAddress: {
       type: String,
       trim: true,

@@ -36,6 +36,9 @@ const validateSettings = (settings) => {
     settings.media.maxVideoSizeMB < 1 || settings.media.maxVideoSizeMB > MEDIA_MAX_VIDEO_MB
   )) return `Media settings require a video limit from 1 to ${MEDIA_MAX_VIDEO_MB}MB and a video upload toggle`;
 
+  if (settings.heroImage && (typeof settings.heroImage !== 'string' || settings.heroImage.length > 2000 || !/^https:\/\//i.test(settings.heroImage))) return 'Hero image must use an HTTPS URL';
+  for (const key of ['responseMessage', 'heroImageAlt']) if (settings[key] !== undefined && (typeof settings[key] !== 'string' || settings[key].length > 500)) return `${key} must be no more than 500 characters`;
+  if (settings.urduTranslations !== undefined && (!Array.isArray(settings.urduTranslations) || settings.urduTranslations.length > 200 || settings.urduTranslations.some(item => !item || typeof item.original !== 'string' || typeof item.translation !== 'string' || item.original.length > 5000 || item.translation.length > 5000))) return 'Provide up to 200 English and Urdu text pairs';
   const arrays = [
     ['businessHours', 14],
     ['services', 30],

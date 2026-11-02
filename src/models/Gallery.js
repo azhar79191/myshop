@@ -6,6 +6,8 @@ const gallerySchema = new mongoose.Schema({
   image: { type: String, required: function () { return this.mediaType !== 'video'; } },
   video: { type: String, required: function () { return this.mediaType === 'video'; } },
   poster: { type: String, default: '' },
+  cloudinaryId: { type: String, default: '' },
+  posterCloudinaryId: { type: String, default: '' },
   storageKey: { type: String, default: '' },
   posterKey: { type: String, default: '' },
   mimeType: String,

@@ -14,9 +14,13 @@ export const MEDIA_TYPES = {
   'video/webm': { extension: '.webm', kind: 'video' },
   'video/ogg': { extension: '.ogv', kind: 'video' },
 };
-export const getMediaPolicy = (settings = {}) => ({
-  allowVideoUploads: settings.allowVideoUploads !== false,
-  maxVideoSizeMB: Math.min(MEDIA_MAX_VIDEO_MB, Number.isInteger(settings.maxVideoSizeMB) && settings.maxVideoSizeMB > 0 ? settings.maxVideoSizeMB : MEDIA_MAX_VIDEO_MB),
-  serverMaxVideoSizeMB: MEDIA_MAX_VIDEO_MB,
-  maxImageSizeMB: 5,
-});
+export const getMediaPolicy = (settings = {}) => {
+  const cloud = process.env.MEDIA_STORAGE === 'cloudinary' || (!process.env.MEDIA_STORAGE && process.env.NODE_ENV === 'production');
+  const serverLimit = cloud ? Math.min(100, MEDIA_MAX_VIDEO_MB) : MEDIA_MAX_VIDEO_MB;
+  return {
+    allowVideoUploads: settings.allowVideoUploads !== false,
+    maxVideoSizeMB: Math.min(serverLimit, Number.isInteger(settings.maxVideoSizeMB) && settings.maxVideoSizeMB > 0 ? settings.maxVideoSizeMB : serverLimit),
+    serverMaxVideoSizeMB: serverLimit,
+    maxImageSizeMB: 5,
+  };
+};

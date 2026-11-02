@@ -36,6 +36,7 @@ const testimonialSchema = new mongoose.Schema(
       trim: true,
       maxlength: [1000, 'Message cannot exceed 1000 characters'],
     },
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', index: true },
     productUsed: {
       type: String,
       trim: true,

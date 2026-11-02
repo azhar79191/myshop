@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import express from 'express';
+import Testimonial from '../src/models/Testimonial.js';
 import Product from '../src/models/Product.js';
 import productRoutes from '../src/routes/productRoutes.js';
 import { errorHandler } from '../src/middleware/errorMiddleware.js';
 
 test('catalog API exposes later pages, full details, and related products by slug', async () => {
+  const originalAggregate = Testimonial.aggregate;
+  Testimonial.aggregate = async () => [];
   const originals = { find: Product.find, countDocuments: Product.countDocuments, findById: Product.findById, findOne: Product.findOne };
   const records = Array.from({ length: 75 }, (_, index) => ({ _id: String(index + 1).padStart(24, '0'), slug: `product-${index + 1}`, name: `Product ${index + 1}`, category: 'Seeds', brand: 'Acme', usage: 'Full usage instructions', stockStatus: 'In Stock' }));
   const query = values => {
@@ -50,6 +53,7 @@ test('catalog API exposes later pages, full details, and related products by slu
     assert.equal(related.data.some(record => record._id === detail.data._id), false);
     assert.equal((await fetch(`${base}?brand[$ne]=x`)).status, 400);
   } finally {
+    Testimonial.aggregate = originalAggregate;
     Object.assign(Product, originals);
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));

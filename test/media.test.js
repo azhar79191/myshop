@@ -4,6 +4,7 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import express from 'express';
+import cloudinary from '../src/config/cloudinary.js';
 import jwt from 'jsonwebtoken';
 
 const directory = await mkdtemp(path.join(os.tmpdir(), 'myshop-media-test-'));
@@ -126,6 +127,40 @@ test('server-hosted Media API lifecycle and upload protections', async t => {
       assert.equal(response.status, 200);
       assert.deepEqual((await readdir(directory)).filter(name => name !== '.incoming'), []);
       assert.deepEqual(await readdir(path.join(directory, '.incoming')), []);
+    });
+    await t.test('cloud media survives independently of local storage and retires replaced assets', async () => {
+      const keys = ['MEDIA_STORAGE', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+      const environment = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+      const upload = cloudinary.uploader.upload, destroy = cloudinary.uploader.destroy;
+      const removed = []; let sequence = 0;
+      process.env.MEDIA_STORAGE = 'cloudinary';
+      for (const key of keys.slice(1)) process.env[key] = 'test-only';
+      cloudinary.uploader.upload = async (file, options) => ({ public_id: `media/asset-${++sequence}`, secure_url: `https://res.cloudinary.com/test/${options.resource_type}/upload/asset-${sequence}` });
+      cloudinary.uploader.destroy = async (id, options) => { removed.push({ id, type: options?.resource_type }); return { result: 'ok' }; };
+      try {
+        const body = form(); body.append('poster', new Blob([png], { type: 'image/png' }), 'cover.png');
+        const uploaded = await fetch(`${base}/api/media`, { method: 'POST', headers: auth, body });
+        assert.equal(uploaded.status, 201, await uploaded.clone().text());
+        const item = (await uploaded.json()).data;
+        assert.match(item.video, /^https:\/\/res.cloudinary.com/);
+        assert.equal(item.cloudinaryId, undefined); assert.equal(item.posterCloudinaryId, undefined);
+        assert.deepEqual((await readdir(directory)).filter(name => name !== '.incoming'), []);
+        const updated = await fetch(`${base}/api/media/${item._id}`, { method: 'PUT', headers: auth, body: form(png, 'image/png', { mediaType: 'image' }) });
+        assert.equal(updated.status, 200);
+        assert.ok(removed.some(asset => asset.id === 'media/asset-1' && asset.type === 'video'));
+        assert.ok(removed.some(asset => asset.id === 'media/asset-2' && asset.type === 'image'));
+        const invalid = await fetch(`${base}/api/media`, { method: 'POST', headers: auth, body: form(png, 'image/png', { title: '' }) });
+        assert.equal(invalid.status, 400); assert.ok(removed.some(asset => asset.id === 'media/asset-4'));
+        assert.equal((await fetch(`${base}/api/media/${item._id}`, { method: 'DELETE', headers: auth })).status, 200);
+        assert.ok(removed.some(asset => asset.id === 'media/asset-3'));
+        delete process.env.CLOUDINARY_API_KEY;
+        const metadata = await fetch(`${base}/api/media/${video._id}`, { method: 'PUT', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'Metadata edit' }) });
+        assert.equal(metadata.status, 404, 'Metadata edits reach the controller without upload credentials');
+        assert.equal((await fetch(`${base}/api/media`, { method: 'POST', headers: auth, body: form() })).status, 503);
+      } finally {
+        cloudinary.uploader.upload = upload; cloudinary.uploader.destroy = destroy;
+        for (const key of keys) { if (environment[key] === undefined) delete process.env[key]; else process.env[key] = environment[key]; }
+      }
     });
     await t.test('ignores client paths for deletion and keeps administrative responses private', async () => {
       await removeLocalMedia('../outside.mp4');

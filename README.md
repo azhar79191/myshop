@@ -91,3 +91,46 @@ Visibility hides items from the public Media page; files are public assets if th
 ### Render persistence
 
 The current `render.yaml` uses the free plan. Render's free filesystem is ephemeral and cannot have a persistent disk. Before using server uploads in production, attach persistent storage on a supported service and set `MEDIA_UPLOAD_DIR` to its mounted directory (for example `/var/data/media` with a `/var/data` disk mount). No paid plan or production deployment is enabled by this change. See [Render persistent disks](https://render.com/docs/disks) and [free service limitations](https://render.com/docs/free).
+
+
+## Customer workflow improvements
+
+Products support `crops`, `activeIngredient`, `formulation`, `targetProblems`, an HTTPS `labelUrl`, optional `translations.ur` (`name`, `description`, `usage`), and stock status per pack. `GET /api/products?crop=Wheat` matches an exact crop tag, ignoring case. Products with explicit pack statuses derive their overall availability from those packs. Pack names must be unique. Existing packs without a status retain the product-level fallback.
+
+Reviews now store a validated product reference. Public approved-review lists accept `productId`; product lists and details calculate ratings only from approved linked reviews. Older reviews are not guessed by partial name: run `npm run migrate:reviews` for an exact-name dry run, then `npm run migrate:reviews -- --apply` only after reviewing the summary and backing up the database. Ambiguous matches remain unlinked.
+
+`POST /api/contact` accepts either phone or email, and an optional `preferredContact` of `phone`, `whatsapp`, or `email`. The chosen channel must have contact details. Public contact/service confirmations return only `data.reference`. Quote requests are saved as contacts with subject `Product quote request`.
+
+Service bookings also accept village, crop, acreage, preferred date, and up to three base64 JPEG/PNG/WebP field photos (2MB each). Field photos require Cloudinary. File signatures and request metadata are validated before upload; failed uploads/database saves clean up new assets. Field photos use public asset URLs and should contain only field imagery.
+
+Authenticated contacts and service-request updates accept `status`, `assignedTo`, `followUpAt`, and `internalNotes`. Lists support server pagination, status, and `overdue=true`. Terminal statuses are excluded from overdue queues. `GET /api/auth/staff` exposes active staff names/IDs to authenticated staff for assignment. Account creation, listing, and activation controls remain superadmin-only.
+
+`GET /api/dashboard` is authenticated and aggregates full database totals, pending reviews, low stock, overdue follow-ups, and six monthly buckets in Asia/Karachi. The frontend polls for new-inquiry counts while visible.
+
+### Durable production media (supersedes the local-only production guidance above)
+
+Production defaults to `MEDIA_STORAGE=cloudinary`; `render.yaml` sets it explicitly. Configure the existing `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` values on the backend. Images, videos, and covers are staged locally only while validated/uploaded, then stored using Cloudinary URLs and asset IDs. Missing credentials block new uploads with a useful error. Metadata edits remain available. Cloud uploads use a 100MB video cap, or a lower `MEDIA_MAX_VIDEO_MB` value.
+
+Development defaults to `MEDIA_STORAGE=local`. Production local storage is available only with `MEDIA_STORAGE=local`, `MEDIA_DURABLE_DISK=true`, and `MEDIA_UPLOAD_DIR` pointing to a genuinely persistent mounted disk. The flag is an operator declaration; it cannot make an ephemeral disk durable.
+
+Before replacing an installation with local media, back up its database and files and run `npm run migrate:media` on the machine that still has the files, with MongoDB and Cloudinary configured. This migrates referenced local files, saves URLs only after uploads succeed, cleans failed cloud uploads, and retains original files. Do not remove the old files before verifying the migrated site. Files already lost by an ephemeral host cannot be reconstructed.
+
+### Recovery email and notifications
+
+All newly set admin passwords require at least 12 characters. Existing passwords continue to authenticate. Recovery uses a 30-minute, one-time token stored as a hash, and invalidates existing sessions after reset. Configure these backend-only values:
+
+```env
+RESEND_API_KEY=your-provider-key
+RECOVERY_FROM_EMAIL=Bismillah Admin <admin@your-verified-domain.example>
+RECOVERY_SITE_URL=https://your-frontend.example
+```
+
+Use a verified sender accepted by your Resend account. The frontend routes are `/admin/forgot-password` and `/admin/reset-password`; reset tokens travel in the URL fragment rather than server request logs. Recovery is unavailable until email is configured. See the [Resend API reference](https://resend.com/docs/api-reference/emails/send-email).
+
+Optional new-lead notifications use `LEAD_NOTIFICATION_WEBHOOK` (HTTPS) and optional `LEAD_NOTIFICATION_SECRET`. Only the lead kind and reference are sent; customer details remain in the CMS. Webhook failure does not reject a saved inquiry and is logged for follow-up. In-app inquiry counts work without a webhook.
+
+### Backups
+
+`npm run backup` writes a timestamped logical database export, collection indexes, and a copy of local media into ignored `backups/`. Pass an explicit directory with `npm run backup -- <directory>`. `COMPLETE.json` exists only after the export succeeds. Pause application writes during the export if you need cross-collection consistency. Files contain customer information and password hashes; keep them in restricted encrypted storage. This JSONL/EJSON logical export is not a `mongodump` archive; restoring it requires parsing EJSON with the MongoDB driver into an empty recovery database and recreating the saved indexes. For a managed production database, also enable its native backup/restore facilities and test restoration.
+
+Cloud media is represented by URL and asset ID in the database backup; maintain an independent asset backup/export with the cloud provider. No backup, migration, email, webhook, or production deployment is run automatically by these changes.

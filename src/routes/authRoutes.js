@@ -1,6 +1,8 @@
 import express from 'express';
 import {
   login,
+  forgotPassword,
+  resetPassword,
   getMe,
   updateProfile,
   updatePassword,
@@ -15,9 +17,12 @@ const router = express.Router();
 
 // Public routes
 router.post('/login', login);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Protected routes
 router.get('/me', protect, getMe);
+router.get('/staff', protect, async (req, res, next) => { try { const { default: Admin } = await import('../models/Admin.js'); res.json({ success: true, data: await Admin.find({ isActive: true }).select('fullName').sort('fullName') }); } catch (error) { next(error); } });
 router.put('/profile', protect, uploadProfileImage, handleUploadError, updateProfile);
 router.put('/password', protect, updatePassword);
 

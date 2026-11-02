@@ -2,6 +2,10 @@ const defaultSiteSettings = {
   siteName: 'Bismillah Spray Center',
   tagline: 'Premium Agricultural Solutions for Pakistan',
   siteLogo: '',
+  responseMessage: 'Our team will contact you during business hours. For urgent questions, call or message us on WhatsApp.',
+  heroImage: '',
+  heroImageAlt: '',
+  urduTranslations: [],
   contact: {
     whatsapp: '923001331616',
     phone: '+923001331616',

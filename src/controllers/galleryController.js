@@ -9,14 +9,18 @@ const serialize = (item, req) => {
   const origin = (process.env.MEDIA_PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
   for (const field of ['image', 'video', 'poster']) if (value[field]?.startsWith('/uploads/media/')) value[field] = `${origin}${value[field]}`;
   value.mediaType ||= 'image';
+  delete value.cloudinaryId;
+  delete value.posterCloudinaryId;
   delete value.storageKey;
   delete value.posterKey;
   return value;
 };
 const removeAssets = async item => {
+  if (item.cloudinaryId) await cloudinary.uploader.destroy(item.cloudinaryId, { resource_type: item.mediaType || 'image' });
+  if (item.posterCloudinaryId) await cloudinary.uploader.destroy(item.posterCloudinaryId, { resource_type: 'image' });
   for (const key of [item.storageKey, item.posterKey]) if (key) await removeLocalMedia(key);
   // Existing Cloudinary images remain supported during migration.
-  if (!item.storageKey && item.image?.startsWith('https://res.cloudinary.com/')) {
+  if (!item.storageKey && !item.cloudinaryId && item.image?.startsWith('https://res.cloudinary.com/')) {
     const uploaded = item.image.split('/upload/')[1];
     if (uploaded) {
       const publicId = uploaded.replace(/^.*?v\d+\//, '').replace(/\.[^/.]+$/, '');
@@ -39,8 +43,8 @@ const buildFields = (req, existing) => {
   if (file) {
     const type = MEDIA_TYPES[file.mimetype].kind;
     if (req.body.mediaType && requestedType !== type) throw new Error('Selected media type does not match the uploaded file.');
-    Object.assign(result, { mediaType: type, storageKey: file.filename, mimeType: file.mimetype, fileSize: file.size, image: type === 'image' ? `/uploads/media/${file.filename}` : undefined, video: type === 'video' ? `/uploads/media/${file.filename}` : undefined });
-    if (type === 'image') Object.assign(result, { poster: '', posterKey: '' });
+    Object.assign(result, { mediaType: type, storageKey: file.cloudinaryId ? '' : file.filename, cloudinaryId: file.cloudinaryId || '', mimeType: file.mimetype, fileSize: file.size, image: type === 'image' ? (file.url || `/uploads/media/${file.filename}`) : undefined, video: type === 'video' ? (file.url || `/uploads/media/${file.filename}`) : undefined });
+    if (type === 'image') Object.assign(result, { poster: '', posterKey: '', posterCloudinaryId: '' });
   } else if (!existing) {
     // Preserve existing image API clients. Videos always require a server upload.
     if (requestedType === 'video') throw new Error('Choose a video file to upload to the server.');
@@ -49,9 +53,9 @@ const buildFields = (req, existing) => {
   } else if (requestedType !== (existing.mediaType || 'image')) throw new Error('Upload a new file to change the media type.');
   if (poster) {
     if ((result.mediaType || existing?.mediaType) !== 'video') throw new Error('Cover images are only available for videos.');
-    Object.assign(result, { poster: `/uploads/media/${poster.filename}`, posterKey: poster.filename });
+    Object.assign(result, { poster: poster.url || `/uploads/media/${poster.filename}`, posterKey: poster.cloudinaryId ? '' : poster.filename, posterCloudinaryId: poster.cloudinaryId || '' });
   }
-  if (req.body.removePoster === 'true' && !poster) Object.assign(result, { poster: '', posterKey: '' });
+  if (req.body.removePoster === 'true' && !poster) Object.assign(result, { poster: '', posterKey: '', posterCloudinaryId: '' });
   return result;
 };
 export const getAllGalleryImages = async (req, res, next) => {
@@ -83,13 +87,15 @@ export const updateGalleryImage = async (req, res, next) => {
   try {
     const item = await Gallery.findById(req.params.id);
     if (!item) { await cleanupMediaUploads(req); return errorResponse(res, 'Media item not found', 404); }
-    const previous = { image: item.image, storageKey: item.storageKey, posterKey: item.posterKey };
+    const previous = { image: item.image, mediaType: item.mediaType, storageKey: item.storageKey, posterKey: item.posterKey, cloudinaryId: item.cloudinaryId, posterCloudinaryId: item.posterCloudinaryId };
     let fields;
     try { fields = buildFields(req, item); } catch (error) { await cleanupMediaUploads(req); return errorResponse(res, error.message, 400); }
     Object.assign(item, fields);
     await item.save();
     const retired = {};
-    if (fields.storageKey && fields.storageKey !== previous.storageKey) Object.assign(retired, { image: previous.image, storageKey: previous.storageKey });
+    if (fields.cloudinaryId !== undefined && fields.cloudinaryId !== previous.cloudinaryId) Object.assign(retired, { cloudinaryId: previous.cloudinaryId, mediaType: previous.mediaType });
+    if (fields.posterCloudinaryId !== undefined && fields.posterCloudinaryId !== previous.posterCloudinaryId) retired.posterCloudinaryId = previous.posterCloudinaryId;
+    if (fields.storageKey !== undefined && fields.storageKey !== previous.storageKey) Object.assign(retired, { image: previous.image, storageKey: previous.storageKey });
     if (fields.posterKey !== undefined && fields.posterKey !== previous.posterKey) retired.posterKey = previous.posterKey;
     await retireAssets(retired);
     successResponse(res, serialize(item, req), 'Media updated successfully');

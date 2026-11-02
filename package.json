@@ -10,7 +10,10 @@
     "test": "node --test",
     "seed:admin": "node src/utils/seedAdmin.js",
     "clean": "node src/utils/cleanDatabase.js",
-    "migrate:images": "node src/utils/migrateImagesToCloudinary.js"
+    "migrate:images": "node src/utils/migrateImagesToCloudinary.js",
+    "migrate:media": "node src/utils/migrateMediaToCloudinary.js",
+    "backup": "node src/utils/backup.js",
+    "migrate:reviews": "node src/utils/linkLegacyReviews.js"
   },
   "keywords": [
     "agriculture",

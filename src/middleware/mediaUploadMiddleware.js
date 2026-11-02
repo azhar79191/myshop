@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import multer from 'multer';
+import cloudinary from '../config/cloudinary.js';
 import SiteSettings from '../models/SiteSettings.js';
 import { MEDIA_UPLOAD_DIR, MEDIA_TYPES, IMAGE_MAX_BYTES, getMediaPolicy } from '../config/media.js';
 
@@ -12,7 +13,10 @@ export const removeLocalMedia = async (filename) => {
 };
 export const cleanupMediaUploads = async (req) => {
   for (const file of Object.values(req.files || {}).flat()) {
-    try { await unlink(file.path); } catch (error) { if (error.code !== 'ENOENT') console.error('Could not remove failed media upload:', error.message); }
+    try {
+      if (file.cloudinaryId) await cloudinary.uploader.destroy(file.cloudinaryId, { resource_type: file.resourceType });
+      await unlink(file.path);
+    } catch (error) { if (error.code !== 'ENOENT') console.error('Could not remove failed media upload:', error.message); }
   }
 };
 export const hasMediaSignature = (bytes, mime) => {
@@ -39,6 +43,12 @@ const storage = multer.diskStorage({
 });
 export const uploadMedia = (req, res, next) => {
   const policy = req.mediaPolicy;
+  // JSON metadata edits do not need an upload provider.
+  if (!req.is('multipart/form-data')) return next();
+  const provider = process.env.MEDIA_STORAGE || (process.env.NODE_ENV === 'production' ? 'cloudinary' : 'local');
+  if (!['cloudinary', 'local'].includes(provider)) return res.status(503).json({ success: false, message: 'Media storage is not configured.' });
+  if (provider === 'cloudinary' && !['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'].every(key => process.env[key])) return res.status(503).json({ success: false, message: 'Media uploads require configured cloud storage.' });
+  if (provider === 'local' && process.env.NODE_ENV === 'production' && process.env.MEDIA_DURABLE_DISK !== 'true') return res.status(503).json({ success: false, message: 'Local production uploads require a durable media disk.' });
   const upload = multer({
     storage,
     limits: { fileSize: Math.max(IMAGE_MAX_BYTES, policy.maxVideoSizeMB * 1024 * 1024), files: 2, fields: 12, fieldSize: 7 * 1024 * 1024, parts: 14 },
@@ -63,9 +73,20 @@ export const uploadMedia = (req, res, next) => {
         if (!hasMediaSignature(bytes, file.mimetype)) throw new Error('The uploaded file content does not match its media type.');
       }
       for (const file of Object.values(req.files || {}).flat()) {
-        const finalPath = path.join(MEDIA_UPLOAD_DIR, file.filename);
-        await rename(file.path, finalPath);
-        file.path = finalPath;
+        if (provider === 'cloudinary') {
+          file.resourceType = MEDIA_TYPES[file.mimetype].kind;
+          const uploaded = await cloudinary.uploader.upload(file.path, {
+            resource_type: file.resourceType, folder: 'bismillah-spray-center/media',
+            public_id: path.parse(file.filename).name,
+          });
+          file.cloudinaryId = uploaded.public_id;
+          file.url = uploaded.secure_url;
+          await unlink(file.path);
+        } else {
+          const finalPath = path.join(MEDIA_UPLOAD_DIR, file.filename);
+          await rename(file.path, finalPath);
+          file.path = finalPath;
+        }
       }
       next();
     } catch (failure) {

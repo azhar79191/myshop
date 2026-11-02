@@ -1,4 +1,5 @@
 import Product from '../models/Product.js';
+import { withRatings } from '../utils/productRatings.js';
 import { successResponse, errorResponse, paginateResponse, asyncHandler } from '../utils/apiResponse.js';
 import { fileToCloudinaryUrl, filesToCloudinaryUrls } from '../middleware/uploadMiddleware.js';
 import { getPagination } from '../utils/pagination.js';
@@ -28,7 +29,7 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   const pages = Math.ceil(total / limitNum);
 
-  return paginateResponse(res, products, {
+  return paginateResponse(res, await withRatings(products), {
     page: pageNum,
     pages,
     total,
@@ -58,7 +59,8 @@ export const getProductById = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Product not found', 404);
   }
 
-  return successResponse(res, product, 'Product retrieved successfully');
+  const [ratedProduct] = await withRatings([product]);
+  return successResponse(res, ratedProduct, 'Product retrieved successfully');
 });
 
 /**
@@ -75,7 +77,7 @@ export const getFeaturedProducts = asyncHandler(async (req, res) => {
     .limit(limit)
     .lean();
 
-  return successResponse(res, products, 'Featured products retrieved successfully');
+  return successResponse(res, await withRatings(products), 'Featured products retrieved successfully');
 });
 
 /**
@@ -228,5 +230,5 @@ export const getRelatedProducts = asyncHandler(async (req, res) => {
     .limit(limit)
     .lean();
 
-  return successResponse(res, related, 'Related products retrieved successfully');
+  return successResponse(res, await withRatings(related), 'Related products retrieved successfully');
 });

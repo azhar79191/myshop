@@ -1,4 +1,6 @@
 import Testimonial from '../models/Testimonial.js';
+import Product from '../models/Product.js';
+import mongoose from 'mongoose';
 import { successResponse, errorResponse, paginateResponse } from '../utils/apiResponse.js';
 import { getPagination } from '../utils/pagination.js';
 
@@ -9,7 +11,7 @@ import { getPagination } from '../utils/pagination.js';
  */
 export const submitTestimonial = async (req, res, next) => {
   try {
-    const { name, email, phone, location, rating, message, productUsed } = req.body;
+    const { name, email, phone, location, rating, message, productUsed, productId } = req.body;
 
     // Validation
     if (!name || !rating || !message) {
@@ -20,6 +22,12 @@ export const submitTestimonial = async (req, res, next) => {
       return errorResponse(res, 'Rating must be between 1 and 5', 400);
     }
 
+    let linkedProduct;
+    if (productId) {
+      if (!mongoose.isValidObjectId(productId)) return errorResponse(res, 'Invalid product', 400);
+      linkedProduct = await Product.findById(productId).select('name');
+      if (!linkedProduct) return errorResponse(res, 'Product not found', 404);
+    }
     const testimonial = await Testimonial.create({
       name,
       email,
@@ -27,7 +35,8 @@ export const submitTestimonial = async (req, res, next) => {
       location,
       rating,
       message,
-      productUsed,
+      productId: linkedProduct?._id,
+      productUsed: linkedProduct?.name || productUsed,
       ipAddress: req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress,
     });
 
@@ -47,6 +56,10 @@ export const getApprovedTestimonials = async (req, res, next) => {
     const { limit = 10, featured } = req.query;
 
     const filter = { isApproved: true };
+    if (req.query.productId) {
+      if (!mongoose.isValidObjectId(req.query.productId)) return errorResponse(res, 'Invalid product', 400);
+      filter.productId = req.query.productId;
+    }
     if (featured === 'true') filter.isFeatured = true;
 
     const { limit: limitNum } = getPagination(1, limit, 10);

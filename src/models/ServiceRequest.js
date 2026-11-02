@@ -2,6 +2,12 @@ import mongoose from 'mongoose';
 
 const serviceRequestSchema = new mongoose.Schema(
   {
+    village: { type: String, trim: true, maxlength: 200 },
+    crop: { type: String, trim: true, maxlength: 100 },
+    acreage: { type: Number, min: 0, max: 1000000 },
+    preferredDate: { type: Date },
+    fieldPhotoIds: { type: [String], default: [], select: false },
+    fieldPhotos: { type: [String], default: [], validate: v => v.length <= 3 && v.every(s => /^https:\/\//i.test(s)) },
     serviceType: {
       type: String,
       required: [true, 'Service type is required'],
@@ -36,6 +42,9 @@ const serviceRequestSchema = new mongoose.Schema(
       enum: ['New', 'In Progress', 'Completed', 'Cancelled'],
       default: 'New',
     },
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+    internalNotes: { type: String, maxlength: 5000, default: '' },
+    followUpAt: { type: Date, default: null, index: true },
     ipAddress: {
       type: String,
       trim: true,
