@@ -20,3 +20,10 @@ export function productSearchPattern(value) {
   return terms.length === 1 ? literal(term) : `(?:${terms.map(literal).join('|')})`;
 }
 export const productSearchFields = ['name', 'description', 'category', 'brand', 'translations.ur.name', 'translations.ur.description', 'searchAliases', 'crops', 'activeIngredient', 'targetProblems'];
+export function productSearchClauses(value) {
+  const term = normalize(value);
+  const recognizedPhrase = aliases.some(names => names.some(name => normalize(name) === term));
+  const words = term.split(' ');
+  const terms = recognizedPhrase || words.length > 10 ? [term] : words;
+  return terms.map(word => ({ $or: productSearchFields.map(field => ({ [field]: { $regex: productSearchPattern(word), $options: 'i' } })) }));
+}
