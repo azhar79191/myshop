@@ -1,5 +1,6 @@
+import { productSearchPattern, productSearchFields } from './productSearch.js';
 export const productFields = body => Object.fromEntries(
-  ['name', 'description', 'category', 'brand', 'image', 'images', 'sizes', 'stockStatus', 'usage', 'featured', 'crops', 'activeIngredient', 'formulation', 'targetProblems', 'labelUrl', 'translations']
+  ['name', 'description', 'category', 'brand', 'image', 'images', 'sizes', 'stockStatus', 'usage', 'featured', 'crops', 'activeIngredient', 'formulation', 'targetProblems', 'labelUrl', 'translations', 'searchAliases']
     .filter(key => body[key] !== undefined).map(key => [key, body[key]])
 );
 
@@ -17,8 +18,8 @@ export const buildProductQuery = query => {
   if (query.category) filter.category = query.category;
   if (query.brand) filter.brand = query.brand;
   if (query.search?.trim()) {
-    const literal = query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    filter.$or = ['name', 'description', 'category', 'brand'].map(field => ({ [field]: { $regex: literal, $options: 'i' } }));
+    const pattern = productSearchPattern(query.search);
+    filter.$or = productSearchFields.map(field => ({ [field]: { $regex: pattern, $options: 'i' } }));
   }
   if (query.featured && !['true', 'false'].includes(query.featured)) invalidQuery('featured must be true or false');
   if (query.available && !['true', 'false'].includes(query.available)) invalidQuery('available must be true or false');

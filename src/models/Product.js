@@ -64,6 +64,7 @@ const productSchema = new mongoose.Schema(
       default: 'In Stock',
     },
     crops: { type: [String], default: [], validate: v => v.length <= 30 && v.every(s => s.length <= 80) },
+    searchAliases: { type: [{ type: String, trim: true, maxlength: 100 }], default: [], validate: v => v.length <= 30 && v.every(name => name.length > 0) },
     activeIngredient: { type: String, trim: true, maxlength: 300 },
     formulation: { type: String, trim: true, maxlength: 100 },
     targetProblems: { type: [String], default: [], validate: v => v.length <= 30 && v.every(s => s.length <= 100) },
