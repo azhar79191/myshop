@@ -4,6 +4,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import dashboardRoutes from '../src/routes/dashboardRoutes.js';
 import Admin from '../src/models/Admin.js';
+import Quote from '../src/models/Quote.js';
 import Product from '../src/models/Product.js';
 import Contact from '../src/models/Contact.js';
 import ServiceRequest from '../src/models/ServiceRequest.js';
@@ -13,7 +14,7 @@ import FAQ from '../src/models/FAQ.js';
 import Brand from '../src/models/Brand.js';
 import { errorHandler } from '../src/middleware/errorMiddleware.js';
 test('dashboard requires authentication and aggregates all records independently of pagination', async () => {
-  const models = [Product, Contact, ServiceRequest, Testimonial, Gallery, FAQ, Brand];
+  const models = [Quote, Product, Contact, ServiceRequest, Testimonial, Gallery, FAQ, Brand];
   const originals = models.map(Model => ({ countDocuments: Model.countDocuments, aggregate: Model.aggregate }));
   const findAdmin = Admin.findById, secret = process.env.JWT_SECRET;
   process.env.JWT_SECRET = 'dashboard-test-secret';
@@ -28,7 +29,7 @@ test('dashboard requires authentication and aggregates all records independently
     const token = jwt.sign({ id: '507f1f77bcf86cd799439011', version: 0 }, process.env.JWT_SECRET);
     const result = await (await fetch(url, { headers: { Authorization: `Bearer ${token}` } })).json();
     assert.equal(result.data.products, 1200); assert.equal(result.data.contacts, 1200); assert.equal(result.data.categories[0].count, 1200);
-    assert.equal(result.data.overdue, 2400); assert.equal(result.data.months.length, 6);
+    assert.equal(result.data.overdue, 3600); assert.equal(result.data.months.length, 6); assert.equal(result.data.newQuotes, 1200); assert.equal(result.data.missingDetails, 1200);
     const monthly = pipelines.find(pipeline => pipeline[0].$match);
     assert.equal(monthly[1].$group._id.$dateToString.timezone, 'Asia/Karachi');
     assert.equal(monthly[0].$match.createdAt.$gte.getUTCHours(), 19);

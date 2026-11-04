@@ -1,3 +1,4 @@
+import { searchSuggestions } from '../utils/searchSuggestions.js';
 import Product from '../models/Product.js';
 import { withRatings } from '../utils/productRatings.js';
 import { successResponse, errorResponse, paginateResponse, asyncHandler } from '../utils/apiResponse.js';
@@ -12,6 +13,7 @@ import { retireCloudinaryImages } from '../utils/cloudinaryAssets.js';
  * @access  Public
  */
 export const getProducts = asyncHandler(async (req, res) => {
+  if (req.query.attention && !req.admin) return errorResponse(res, 'Catalog attention filters require admin access', 403);
   const { filter, sort } = buildProductQuery(req.query);
 
   const { page: pageNum, limit: limitNum, skip } = getPagination(req.query.page, req.query.limit, 12);
@@ -28,13 +30,19 @@ export const getProducts = asyncHandler(async (req, res) => {
   ]);
 
   const pages = Math.ceil(total / limitNum);
+  let suggestions = [];
+  if (!total && req.query.search?.trim()) {
+    const { filter: candidateFilter } = buildProductQuery({ ...req.query, search: '' });
+    const candidates = await Product.find(candidateFilter).select('name brand category activeIngredient crops searchAliases translations.ur.name').sort('name _id').limit(300).lean();
+    suggestions = searchSuggestions(req.query.search, candidates);
+  }
 
   return paginateResponse(res, await withRatings(products), {
     page: pageNum,
     pages,
     total,
     limit: limitNum,
-  }, 'Products retrieved successfully');
+  }, 'Products retrieved successfully', { suggestions });
 });
 
 /**

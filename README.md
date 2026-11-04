@@ -131,6 +131,30 @@ Optional new-lead notifications use `LEAD_NOTIFICATION_WEBHOOK` (HTTPS) and opti
 
 ### Backups
 
-`npm run backup` writes a timestamped logical database export, collection indexes, and a copy of local media into ignored `backups/`. Pass an explicit directory with `npm run backup -- <directory>`. `COMPLETE.json` exists only after the export succeeds. Pause application writes during the export if you need cross-collection consistency. Files contain customer information and password hashes; keep them in restricted encrypted storage. This JSONL/EJSON logical export is not a `mongodump` archive; restoring it requires parsing EJSON with the MongoDB driver into an empty recovery database and recreating the saved indexes. For a managed production database, also enable its native backup/restore facilities and test restoration.
+`npm run backup` writes a timestamped logical database export, collection indexes, and a copy of local media into ignored `backups/`. Pass an explicit directory with `npm run backup -- <directory>`. `COMPLETE.json` exists only after the export succeeds. Pause application writes during the export if you need cross-collection consistency. Files contain customer information and password hashes; keep them in restricted encrypted storage. This JSONL/EJSON logical export is not a `mongodump` archive; use the version 2 verification and isolated restore-check commands described below to validate documents and indexes in an empty recovery database. For a managed production database, also enable its native backup/restore facilities and test restoration.
 
-Cloud media is represented by URL and asset ID in the database backup; maintain an independent asset backup/export with the cloud provider. No backup, migration, email, webhook, or production deployment is run automatically by these changes.
+Cloud media is represented by URL and asset ID in the database backup; maintain an independent asset backup/export with the cloud provider. Development checks do not initiate production backups, migrations, recovery emails or deployments. Configured notification retries run when the deployed API worker is active.
+
+## Structured product quotes
+
+Customers submit `POST /api/quotes` with a UUID v4 `requestId`, name, phone, 1–30 product/pack/quantity items, and an optional collection/delivery preference and location. The server snapshots catalog names and pack sizes, checks stock, and returns only a reference and status. Identical retries reuse the reference; changed payloads cannot reuse the UUID. Shared public submission limits apply.
+
+Authenticated staff use `GET /api/quotes` (status, overdue, reference and pagination filters) and `PUT /api/quotes/:id` (record `version`, unit prices, charge, status, assignment, notes and follow-up). New → Quoted → Confirmed → Closed tracks progress. Complete prices and an explicit charge are required for Quoted/Confirmed. Totals use integer cents during calculation; stale versions return 409. The unique request ID index is initialized before the server accepts traffic. Existing quote messages remain in Contacts.
+
+`GET /api/products/admin/list?attention=low-stock` and `attention=missing-details` require authentication. Empty public catalog searches include bounded `suggestions` that respect the same filters. The dashboard exposes separate overdue counts and new quote/missing-detail counters.
+
+Delivery and collection text is configured through `deliveryAreas`, `deliveryDetails`, and `collectionDetails` in site settings (500 characters each). No payment settings are added. Deploy this API before the matching frontend release.
+
+## Dynamic public content
+
+Site settings now include `aboutContent`, `pageImages`, `pageContent`, `seoPages`, `homepageSections` and `policies`. Missing nested fields fall back to defaults; partial saves preserve previously saved values. Privacy and terms revision dates are stamped on the server only when their sections change. User-supplied revision dates are ignored.
+
+Authenticated `GET /api/site-settings/configuration` returns booleans for configured services without credentials. Authenticated `POST /api/site-settings/images` uses the existing image storage and 5MB image limits, returning a URL for a draft selection. Save settings separately to publish the selection. Deploy this API before the frontend content-management release. Payment methods remain excluded.
+
+## Reliability and recovery
+
+Settings GET responses include `_revision`; PUT must send that revision. Published logo uploads require `If-Match` with the revision. Atomic saves advance the revision; stale or concurrent changes return 409. The settings and notification indexes are initialized before accepting traffic.
+
+`notificationdeliveries` persists configured lead alerts. A leased worker resumes pending work and retries up to three times. Authenticated `GET /api/notifications` lists delivery status; `POST /api/notifications/:id/retry` requeues failed/disabled rows. Alert payloads contain references only. Receivers should deduplicate `X-Notification-Id` because delivery is at least once.
+
+`npm run backup` now produces a version 2 checksum manifest and refuses existing destinations. `npm run backup:verify -- <directory>` verifies the snapshot without a database connection. `npm run backup:restore-check -- <directory>` requires an explicit `RESTORE_MONGODB_URI` and empty `RESTORE_DATABASE_NAME` beginning `restore_check_`; it compares restored BSON records and index definitions and retains the recovery copy. These commands do not schedule backups. Real production restore/scheduling checks have not been run by development tests.

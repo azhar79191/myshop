@@ -13,15 +13,17 @@ const invoke = (controller, request) => new Promise((resolve, reject) => {
 test('settings and logo saves record authenticated actors, bound history, and keep it private', async () => {
   const originals = { findOne: SiteSettings.findOne, findOneAndUpdate: SiteSettings.findOneAndUpdate };
   let update;
+  let revision = 0;
+  let stored = { siteName: 'Shop' };
   const history = [{ savedAt: new Date('2026-01-01T00:00:00Z'), name: 'Earlier admin', action: 'settings' }];
-  SiteSettings.findOne = () => ({ select() { return this; }, lean: async () => ({ settings: { siteName: 'Shop' }, history }), then(resolve) { return Promise.resolve({ settings: { siteName: 'Shop' } }).then(resolve); } });
+  SiteSettings.findOne = () => ({ select() { return this; }, lean: async () => ({ settings: stored, history, revision }), then(resolve) { return Promise.resolve({ settings: { siteName: 'Shop' } }).then(resolve); } });
   SiteSettings.findOneAndUpdate = (filter, change) => {
     update = change;
-    return { lean: async () => ({ settings: change.$set.settings }) };
+    return { lean: async () => ({ settings: stored = change.$set.settings, revision: ++revision }) };
   };
   const admin = { _id: '507f1f77bcf86cd799439011', fullName: 'Verified Admin' };
   try {
-    const result = await invoke(updateSiteSettings, { admin, body: { siteName: 'Updated Shop', savedBy: 'forged', history: [] } });
+    const result = await invoke(updateSiteSettings, { admin, body: { _revision: revision, siteName: 'Updated Shop', savedBy: 'forged', history: [] } });
     assert.equal(result.data.siteName, 'Updated Shop');
     assert.equal(result.data.savedBy, undefined);
     assert.equal(result.data.history, undefined);
@@ -31,7 +33,7 @@ test('settings and logo saves record authenticated actors, bound history, and ke
     assert.equal(entry.action, 'settings');
     assert.ok(entry.savedAt instanceof Date);
     assert.equal(update.$push.history.$slice, -20);
-    await invoke(uploadSiteLogo, { admin, file: { path: 'https://example.com/logo.png' } });
+    await invoke(uploadSiteLogo, { admin, headers: { 'if-match': String(revision) }, file: { path: 'https://example.com/logo.png' } });
     assert.equal(update.$push.history.$each[0].action, 'logo');
     const publicResult = await invoke(getSiteSettings, {});
     assert.equal(publicResult.history, undefined);

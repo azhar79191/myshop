@@ -34,11 +34,12 @@ export const errorResponse = (res, message = 'Internal Server Error', statusCode
 /**
  * Pagination helper
  */
-export const paginateResponse = (res, data, pagination, message = 'Success') => {
+export const paginateResponse = (res, data, pagination, message = 'Success', extra = {}) => {
   return res.status(200).json({
     success: true,
     message,
     data,
+    ...extra,
     pagination: {
       currentPage: pagination.page,
       totalPages: pagination.pages,

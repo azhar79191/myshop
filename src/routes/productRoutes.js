@@ -16,6 +16,7 @@ import { protect } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.get('/', getProducts);
+router.get('/admin/list', protect, getProducts);
 router.get('/featured/list', getFeaturedProducts);
 router.get('/categories/all', getCategories);
 router.get('/brands/all', getBrands);

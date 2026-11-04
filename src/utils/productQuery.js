@@ -1,3 +1,4 @@
+import { lowStockFilter, missingProductFilter } from './catalogAttention.js';
 import { productSearchClauses } from './productSearch.js';
 export const productFields = body => Object.fromEntries(
   ['name', 'description', 'category', 'brand', 'image', 'images', 'sizes', 'stockStatus', 'usage', 'featured', 'crops', 'activeIngredient', 'formulation', 'targetProblems', 'labelUrl', 'translations', 'searchAliases']
@@ -10,7 +11,7 @@ const invalidQuery = message => {
 
 export const buildProductQuery = query => {
   const filter = {};
-  for (const key of ['crop', 'category', 'brand', 'search', 'stockStatus', 'sort', 'featured', 'available', 'minPrice', 'maxPrice']) {
+  for (const key of ['crop', 'category', 'brand', 'search', 'stockStatus', 'sort', 'featured', 'available', 'minPrice', 'maxPrice', 'attention']) {
     if (query[key] !== undefined && typeof query[key] !== 'string') invalidQuery(`${key} must be a string`);
     if (query[key]?.length > 200) invalidQuery(`${key} is too long`);
   }
@@ -39,6 +40,10 @@ export const buildProductQuery = query => {
   }
   if (price.$gte !== undefined && price.$lte !== undefined && price.$gte > price.$lte) invalidQuery('minPrice cannot exceed maxPrice');
   if (Object.keys(price).length) filter.sizes = { $elemMatch: { price } };
+  if (query.attention) {
+    if (!['low-stock', 'missing-details'].includes(query.attention)) invalidQuery('Invalid catalog attention filter');
+    filter.$and = [...(filter.$and || []), query.attention === 'low-stock' ? lowStockFilter : missingProductFilter];
+  }
   const sort = query.sort || '-createdAt';
   if (!['createdAt', '-createdAt', 'name', '-name', 'sizes.price', '-sizes.price'].includes(sort)) invalidQuery('Invalid product sort');
   return { filter, sort };

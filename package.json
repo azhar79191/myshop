@@ -13,7 +13,9 @@
     "migrate:images": "node src/utils/migrateImagesToCloudinary.js",
     "migrate:media": "node src/utils/migrateMediaToCloudinary.js",
     "backup": "node src/utils/backup.js",
-    "migrate:reviews": "node src/utils/linkLegacyReviews.js"
+    "migrate:reviews": "node src/utils/linkLegacyReviews.js",
+    "backup:verify": "node src/utils/verifyBackup.js",
+    "backup:restore-check": "node src/utils/restoreCheck.js"
   },
   "keywords": [
     "agriculture",

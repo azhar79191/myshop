@@ -8,6 +8,7 @@ const siteSettingsSchema = new mongoose.Schema(
       unique: true,
       immutable: true,
     },
+    revision: { type: Number, default: 0, min: 0 },
     settings: {
       type: mongoose.Schema.Types.Mixed,
       required: true,

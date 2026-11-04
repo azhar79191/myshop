@@ -1,3 +1,4 @@
+import notificationRoutes from './routes/notificationRoutes.js';
 import './config/environment.js';
 import express from 'express';
 import cors from 'cors';
@@ -6,6 +7,7 @@ import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import quoteRoutes from './routes/quoteRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import faqRoutes from './routes/faqRoutes.js';
 import { MEDIA_UPLOAD_DIR } from './config/media.js';
@@ -57,7 +59,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Range', 'If-Match'],
   optionsSuccessStatus: 200,
   maxAge: 86400 // Cache preflight requests for 24 hours
 };
@@ -107,12 +109,14 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.post(['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password'], loginRateLimit);
-app.post(['/api/contact', '/api/service-requests', '/api/testimonials'], submissionRateLimit);
+app.post(['/api/quotes', '/api/contact', '/api/service-requests', '/api/testimonials'], submissionRateLimit);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/site-settings', siteSettingsRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/quotes', quoteRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/media', galleryRoutes);
 app.use('/api/gallery', galleryRoutes); // Compatibility for existing clients

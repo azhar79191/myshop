@@ -1,3 +1,6 @@
+import { normalizeBusinessSettings } from '../utils/businessStatistics.js';
+import { mergeSettings } from '../utils/mergeSettings.js';
+import { validateContentSettings, stampPolicyRevisions } from '../utils/contentSettings.js';
 import { MEDIA_MAX_VIDEO_MB } from '../config/media.js';
 import SiteSettings from '../models/SiteSettings.js';
 import defaultSiteSettings from '../config/defaultSiteSettings.js';
@@ -37,7 +40,7 @@ const validateSettings = (settings) => {
   )) return `Media settings require a video limit from 1 to ${MEDIA_MAX_VIDEO_MB}MB and a video upload toggle`;
 
   if (settings.heroImage && (typeof settings.heroImage !== 'string' || settings.heroImage.length > 2000 || !/^https:\/\//i.test(settings.heroImage))) return 'Hero image must use an HTTPS URL';
-  for (const key of ['responseMessage', 'heroImageAlt']) if (settings[key] !== undefined && (typeof settings[key] !== 'string' || settings[key].length > 500)) return `${key} must be no more than 500 characters`;
+  for (const key of ['responseMessage', 'heroImageAltUr', 'heroImageAlt', 'deliveryAreas', 'deliveryDetails', 'collectionDetails']) if (settings[key] !== undefined && (typeof settings[key] !== 'string' || settings[key].length > 500)) return `${key} must be no more than 500 characters`;
   if (settings.urduTranslations !== undefined && (!Array.isArray(settings.urduTranslations) || settings.urduTranslations.length > 200 || settings.urduTranslations.some(item => !item || typeof item.original !== 'string' || typeof item.translation !== 'string' || item.original.length > 5000 || item.translation.length > 5000))) return 'Provide up to 200 English and Urdu text pairs';
   const arrays = [
     ['businessHours', 14],
@@ -60,54 +63,57 @@ const validateSettings = (settings) => {
     }
   }
 
-  return null;
+  return validateContentSettings(settings);
 };
 
 export const getSiteSettings = asyncHandler(async (req, res) => {
   const record = await SiteSettings.findOne({ key: 'global' }).lean();
-  const settings = { ...defaultSiteSettings, ...(record?.settings || {}) };
-  return successResponse(res, settings, 'Site settings retrieved successfully');
+  const settings = normalizeBusinessSettings(mergeSettings(defaultSiteSettings, record?.settings));
+  return successResponse(res, { ...settings, _revision: record?.revision || 0 }, 'Site settings retrieved successfully');
 });
 
 export const updateSiteSettings = asyncHandler(async (req, res) => {
+  if (!Number.isSafeInteger(req.body?._revision) || req.body._revision < 0) return errorResponse(res, 'Reload site settings before saving', 400);
   const validationError = validateSettings(req.body);
   if (validationError) return errorResponse(res, validationError, 400);
   const suppliedSettings = Object.fromEntries(Object.keys(defaultSiteSettings)
     .filter(key => req.body[key] !== undefined).map(key => [key, req.body[key]]));
 
-  const settings = {
-    ...defaultSiteSettings,
-    ...suppliedSettings,
-    contact: { ...defaultSiteSettings.contact, ...req.body.contact },
-    social: { ...defaultSiteSettings.social, ...req.body.social },
-    theme: { ...defaultSiteSettings.theme, ...req.body.theme },
-    categories: { ...defaultSiteSettings.categories, ...req.body.categories },
-    homeContent: { ...defaultSiteSettings.homeContent, ...req.body.homeContent },
-    media: { ...defaultSiteSettings.media, ...req.body.media },
-  };
-  const record = await SiteSettings.findOneAndUpdate(
-    { key: 'global' },
-    { $set: { settings }, $push: { history: { $each: [historyEntry(req, 'settings')], $slice: -20 } } },
-    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-  ).lean();
+  const previousRecord = await SiteSettings.findOne({ key: 'global' }).lean();
+  if (req.body._revision !== (previousRecord?.revision || 0)) return errorResponse(res, 'Site settings changed. Your draft is preserved. Reload saved settings and review before saving.', 409);
+  const previous = normalizeBusinessSettings(mergeSettings(defaultSiteSettings, previousRecord?.settings));
+  const settings = stampPolicyRevisions(normalizeBusinessSettings(mergeSettings(previous, suppliedSettings)), previous);
+  const record = await writeSettings(req, previousRecord, settings, req.body._revision, 'settings');
+  if (!record) return errorResponse(res, 'Site settings changed. Your draft is preserved. Reload saved settings and review before saving.', 409);
+  return successResponse(res, { ...record.settings, _revision: record.revision }, 'Site settings updated successfully');
+});
 
-  return successResponse(res, record.settings, 'Site settings updated successfully');
+export const checkLogoRevision = asyncHandler(async (req, res, next) => {
+  const raw = req.headers?.['if-match'];
+  if (typeof raw !== 'string' || !/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) return errorResponse(res, 'Reload site settings before saving', 400);
+  const previous = await SiteSettings.findOne({ key: 'global' }).lean();
+  if (Number(raw) !== (previous?.revision || 0)) return errorResponse(res, 'Site settings changed. Your draft is preserved. Reload saved settings and review before saving.', 409);
+  return next();
 });
 
 export const uploadSiteLogo = asyncHandler(async (req, res) => {
   if (!req.file) return errorResponse(res, 'Please provide a website logo image', 400);
-
-  const record = await SiteSettings.findOne({ key: 'global' });
-  const settings = {
-    ...defaultSiteSettings,
-    ...(record?.settings || {}),
-    siteLogo: req.file.path,
-  };
-  const updatedRecord = await SiteSettings.findOneAndUpdate(
-    { key: 'global' },
-    { $set: { settings }, $push: { history: { $each: [historyEntry(req, 'logo')], $slice: -20 } } },
-    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-  ).lean();
-
-  return successResponse(res, updatedRecord.settings, 'Website logo uploaded successfully');
+  const rawVersion = req.headers?.['if-match'];
+  if (typeof rawVersion !== 'string' || !/^\d+$/.test(rawVersion)) return errorResponse(res, 'Reload site settings before saving', 400);
+  const revision = Number(rawVersion);
+  const previous = await SiteSettings.findOne({ key: 'global' }).lean();
+  if (revision !== (previous?.revision || 0)) return errorResponse(res, 'Site settings changed. Your draft is preserved. Reload saved settings and review before saving.', 409);
+  const settings = normalizeBusinessSettings(mergeSettings(defaultSiteSettings, previous?.settings, { siteLogo: req.file.path }));
+  const saved = await writeSettings(req, previous, settings, revision, 'logo');
+  if (!saved) return errorResponse(res, 'Site settings changed. Your draft is preserved. Reload saved settings and review before saving.', 409);
+  return successResponse(res, { ...saved.settings, _revision: saved.revision }, 'Website logo uploaded successfully');
 });
+
+async function writeSettings(req, previous, settings, revision, action) {
+  if (!previous) {
+    try { return await SiteSettings.create({ key: 'global', settings, revision: 1, history: [historyEntry(req, action)] }); }
+    catch (error) { if (error.code === 11000) return null; throw error; }
+  }
+  const filter = { key: 'global', ...(revision === 0 ? { $or: [{ revision: 0 }, { revision: { $exists: false } }] } : { revision }) };
+  return SiteSettings.findOneAndUpdate(filter, { $set: { settings }, $inc: { revision: 1 }, $push: { history: { $each: [historyEntry(req, action)], $slice: -20 } } }, { new: true, runValidators: true }).lean();
+}

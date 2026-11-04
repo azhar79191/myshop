@@ -1,4 +1,4 @@
-const NO_STORE_PREFIXES = ['/api/auth', '/api/contact', '/api/service-requests'];
+const NO_STORE_PREFIXES = ['/api/quotes', '/api/auth', '/api/contact', '/api/service-requests'];
 
 export const getCacheControl = (path, method = 'GET', hasAuthorization = false) => {
   if (method !== 'GET' || hasAuthorization || path === '/api/health') {
@@ -23,6 +23,7 @@ export const getCacheControl = (path, method = 'GET', hasAuthorization = false) 
     return 'public, max-age=300, s-maxage=900, stale-while-revalidate=1800';
   }
 
+  if (path.startsWith('/api/products/admin')) return 'no-store';
   if (path.startsWith('/api/products')) {
     return 'public, max-age=300, s-maxage=900, stale-while-revalidate=1800';
   }

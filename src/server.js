@@ -1,4 +1,8 @@
+import SiteSettings from './models/SiteSettings.js';
+import NotificationDelivery from './models/NotificationDelivery.js';
+import { startNotificationWorker } from './utils/notifications.js';
 import https from 'https';
+import Quote from './models/Quote.js';
 import { validateEnvironment } from './config/environment.js';
 import app from './app.js';
 import { connectDB } from './config/db.js';
@@ -12,6 +16,11 @@ const startServer = async () => {
 
     // Connect to MongoDB
     await connectDB();
+    // Do not accept quote retries before the unique request identifier index is ready.
+    await SiteSettings.init();
+    await Quote.init();
+    await NotificationDelivery.init();
+    const stopNotificationWorker = startNotificationWorker();
 
     // Self-ping to prevent Render free tier sleep (every 14 minutes)
     if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
@@ -52,6 +61,7 @@ const startServer = async () => {
 
     // Graceful shutdown on SIGTERM
     process.on('SIGTERM', () => {
+      stopNotificationWorker();
       console.log('SIGTERM received. Shutting down gracefully...');
       server.close(() => {
         console.log('Server closed.');

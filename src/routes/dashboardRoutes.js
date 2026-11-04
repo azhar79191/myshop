@@ -1,4 +1,6 @@
 import express from 'express';
+import Quote from '../models/Quote.js';
+import { lowStockFilter, missingProductFilter } from '../utils/catalogAttention.js';
 import Product from '../models/Product.js';
 import Contact from '../models/Contact.js';
 import ServiceRequest from '../models/ServiceRequest.js';
@@ -19,14 +21,15 @@ router.get('/', protect, asyncHandler(async (req, res) => {
     return { key: date.toISOString().slice(0, 7), label: date.toLocaleDateString('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }) };
   });
   const monthly = Model => Model.aggregate([{ $match: { createdAt: { $gte: start } } }, { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt', timezone: 'Asia/Karachi' } }, count: { $sum: 1 } } }]);
-  const [products, contacts, services, pendingReviews, lowStock, overdueContacts, overdueServices, newContacts, newServices, categories, contactMonths, productMonths, gallery, faqs, brands, testimonials] = await Promise.all([
+  const [products, contacts, services, pendingReviews, lowStock, overdueContacts, overdueServices, newContacts, newServices, categories, contactMonths, productMonths, gallery, faqs, brands, testimonials, newQuotes, overdueQuotes, missingDetails] = await Promise.all([
     Product.countDocuments(), Contact.countDocuments(), ServiceRequest.countDocuments(), Testimonial.countDocuments({ isApproved: false }),
-    Product.countDocuments({ $or: [{ stockStatus: 'Low Stock' }, { 'sizes.stockStatus': 'Low Stock' }] }),
+    Product.countDocuments(lowStockFilter),
     Contact.countDocuments({ followUpAt: { $lt: now }, status: { $nin: ['Replied', 'Archived'] } }),
     ServiceRequest.countDocuments({ followUpAt: { $lt: now }, status: { $nin: ['Completed', 'Cancelled'] } }),
     Contact.countDocuments({ status: 'New' }), ServiceRequest.countDocuments({ status: 'New' }),
     Product.aggregate([{ $group: { _id: '$category', count: { $sum: 1 } } }]), monthly(Contact), monthly(Product), Gallery.countDocuments(), FAQ.countDocuments(), Brand.countDocuments(), Testimonial.countDocuments(),
+    Quote.countDocuments({ status: 'New' }), Quote.countDocuments({ followUpAt: { $lt: now }, status: { $ne: 'Closed' } }), Product.countDocuments(missingProductFilter),
   ]);
-  successResponse(res, { months, products, contacts, services, pendingReviews, lowStock, overdue: overdueContacts + overdueServices, newContacts, newServices, categories, contactMonths, productMonths, gallery, faqs, brands, testimonials });
+  successResponse(res, { months, products, contacts, services, pendingReviews, lowStock, overdue: overdueContacts + overdueServices + overdueQuotes, overdueContacts, overdueServices, overdueQuotes, newQuotes, missingDetails, newContacts, newServices, categories, contactMonths, productMonths, gallery, faqs, brands, testimonials });
 }));
 export default router;
