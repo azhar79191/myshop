@@ -27,30 +27,35 @@ app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 0));
 app.set('etag', 'strong');
 
 // Enable compression for all responses
-app.use(compression({
-  level: 6, // Compression level (0-9)
-  threshold: 1024, // Only compress responses larger than 1KB
-  filter: (req, res) => {
-    if (req.headers['x-no-compression']) {
-      return false;
-    }
-    return compression.filter(req, res);
-  }
-}));
+app.use(
+  compression({
+    level: 6, // Compression level (0-9)
+    threshold: 1024, // Only compress responses larger than 1KB
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  }),
+);
 
 // CORS configuration
 const allowedOrigins = new Set([
   'https://bismillahspraycenter.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
-  ...(process.env.FRONTEND_URL || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+  ...(process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 ]);
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.has(origin) || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
@@ -61,7 +66,7 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Range', 'If-Match'],
   optionsSuccessStatus: 200,
-  maxAge: 86400 // Cache preflight requests for 24 hours
+  maxAge: 86400, // Cache preflight requests for 24 hours
 };
 
 app.use(cors(corsOptions));
@@ -79,7 +84,9 @@ app.use(cachePolicyMiddleware);
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${Date.now() - start}ms)`);
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${Date.now() - start}ms)`,
+    );
   });
   next();
 });
@@ -108,8 +115,14 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
-app.post(['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password'], loginRateLimit);
-app.post(['/api/quotes', '/api/contact', '/api/service-requests', '/api/testimonials'], submissionRateLimit);
+app.post(
+  ['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password'],
+  loginRateLimit,
+);
+app.post(
+  ['/api/quotes', '/api/contact', '/api/service-requests', '/api/testimonials'],
+  submissionRateLimit,
+);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/site-settings', siteSettingsRoutes);
@@ -120,10 +133,18 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/media', galleryRoutes);
 app.use('/api/gallery', galleryRoutes); // Compatibility for existing clients
-app.use('/uploads/media', express.static(MEDIA_UPLOAD_DIR, {
-  acceptRanges: true, dotfiles: 'deny', index: false, maxAge: '1d',
-  setHeaders: res => { res.set('X-Content-Type-Options', 'nosniff'); },
-}));
+app.use(
+  '/uploads/media',
+  express.static(MEDIA_UPLOAD_DIR, {
+    acceptRanges: true,
+    dotfiles: 'deny',
+    index: false,
+    maxAge: '1d',
+    setHeaders: (res) => {
+      res.set('X-Content-Type-Options', 'nosniff');
+    },
+  }),
+);
 app.use('/api/brands', brandRoutes);
 app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/testimonials', testimonialRoutes);

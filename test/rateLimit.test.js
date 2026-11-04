@@ -5,10 +5,23 @@ import { createRateLimiter } from '../src/middleware/rateLimitMiddleware.js';
 test('rate limits isolate clients, reset after expiry, and send retry information', () => {
   let timestamp = 1000;
   const limiter = createRateLimiter({ limit: 2, windowMs: 1000, now: () => timestamp });
-  const invoke = ip => {
+  const invoke = (ip) => {
     const result = { statusCode: 200, headers: {}, passed: false };
-    const response = { set: (name, value) => { result.headers[name] = value; }, status: code => { result.statusCode = code; return response; }, json: body => { result.body = body; } };
-    limiter({ ip }, response, () => { result.passed = true; });
+    const response = {
+      set: (name, value) => {
+        result.headers[name] = value;
+      },
+      status: (code) => {
+        result.statusCode = code;
+        return response;
+      },
+      json: (body) => {
+        result.body = body;
+      },
+    };
+    limiter({ ip }, response, () => {
+      result.passed = true;
+    });
     return result;
   };
   assert.equal(invoke('a').passed, true);

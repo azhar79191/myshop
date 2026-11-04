@@ -13,7 +13,9 @@ export const createRateLimiter = ({ limit, windowMs, maxKeys = 10000, now = Date
     if (!entry || entry.resetAt <= timestamp) {
       if (windows.size >= maxKeys) {
         res.set('Retry-After', String(Math.ceil(windowMs / 1000)));
-        return res.status(429).json({ success: false, message: 'Too many requests. Please try again later.' });
+        return res
+          .status(429)
+          .json({ success: false, message: 'Too many requests. Please try again later.' });
       }
       entry = { count: 0, resetAt: timestamp + windowMs };
       windows.set(key, entry);
@@ -23,7 +25,9 @@ export const createRateLimiter = ({ limit, windowMs, maxKeys = 10000, now = Date
     res.set('RateLimit-Remaining', String(Math.max(0, limit - entry.count)));
     if (entry.count > limit) {
       res.set('Retry-After', String(Math.max(1, Math.ceil((entry.resetAt - timestamp) / 1000))));
-      return res.status(429).json({ success: false, message: 'Too many requests. Please try again later.' });
+      return res
+        .status(429)
+        .json({ success: false, message: 'Too many requests. Please try again later.' });
     }
     return next();
   };

@@ -11,11 +11,11 @@ test('keeps admin and dynamic settings responses private', () => {
 test('sets consistent caching for public catalog and content routes', () => {
   assert.equal(
     getCacheControl('/api/products/categories/all'),
-    'public, max-age=300, s-maxage=900, stale-while-revalidate=1800'
+    'public, max-age=300, s-maxage=900, stale-while-revalidate=1800',
   );
   assert.equal(
     getCacheControl('/api/gallery'),
-    'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600'
+    'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600',
   );
 });
 

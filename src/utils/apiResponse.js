@@ -18,7 +18,12 @@ export const successResponse = (res, data, message = 'Success', statusCode = 200
 /**
  * Error response helper
  */
-export const errorResponse = (res, message = 'Internal Server Error', statusCode = 500, errors = null) => {
+export const errorResponse = (
+  res,
+  message = 'Internal Server Error',
+  statusCode = 500,
+  errors = null,
+) => {
   res.set('Cache-Control', 'no-store');
   const response = {
     success: false,

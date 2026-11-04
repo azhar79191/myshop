@@ -1,7 +1,12 @@
 import Contact from '../models/Contact.js';
 import { leadFields, leadFilter } from '../utils/leadFields.js';
 import { notifyNewLead } from '../utils/notifications.js';
-import { successResponse, errorResponse, paginateResponse, asyncHandler } from '../utils/apiResponse.js';
+import {
+  successResponse,
+  errorResponse,
+  paginateResponse,
+  asyncHandler,
+} from '../utils/apiResponse.js';
 import { getPagination } from '../utils/pagination.js';
 
 /**
@@ -12,8 +17,14 @@ import { getPagination } from '../utils/pagination.js';
 export const submitContact = asyncHandler(async (req, res) => {
   const { name, email, phone, subject, message } = req.body;
 
-  if ([name, email, phone, subject, message].some(value => value !== undefined && typeof value !== 'string')) return errorResponse(res, 'Contact fields must be text', 400);
-  if (phone && !/^\+?[0-9]{7,15}$/.test(phone.replace(/[\s()-]/g, ''))) return errorResponse(res, 'Provide a valid phone number', 400);
+  if (
+    [name, email, phone, subject, message].some(
+      (value) => value !== undefined && typeof value !== 'string',
+    )
+  )
+    return errorResponse(res, 'Contact fields must be text', 400);
+  if (phone && !/^\+?[0-9]{7,15}$/.test(phone.replace(/[\s()-]/g, '')))
+    return errorResponse(res, 'Provide a valid phone number', 400);
 
   // Basic validation
   if (!name || !(email?.trim() || phone?.trim()) || !subject || !message) {
@@ -21,7 +32,11 @@ export const submitContact = asyncHandler(async (req, res) => {
   }
 
   const channel = req.body.preferredContact || (phone?.trim() ? 'phone' : 'email');
-  if (!['phone', 'whatsapp', 'email'].includes(channel) || (channel === 'email' ? !email?.trim() : !phone?.trim())) return errorResponse(res, 'Provide contact details for your chosen reply method', 400);
+  if (
+    !['phone', 'whatsapp', 'email'].includes(channel) ||
+    (channel === 'email' ? !email?.trim() : !phone?.trim())
+  )
+    return errorResponse(res, 'Provide contact details for your chosen reply method', 400);
   const contact = await Contact.create({
     preferredContact: channel,
     name,
@@ -33,7 +48,12 @@ export const submitContact = asyncHandler(async (req, res) => {
   });
 
   void notifyNewLead('contact', contact._id);
-  return successResponse(res, { reference: String(contact._id) }, 'Message sent successfully. We will get back to you soon!', 201);
+  return successResponse(
+    res,
+    { reference: String(contact._id) },
+    'Message sent successfully. We will get back to you soon!',
+    201,
+  );
 });
 
 /**
@@ -53,12 +73,17 @@ export const getContacts = asyncHandler(async (req, res) => {
 
   const pages = Math.ceil(total / limitNum);
 
-  return paginateResponse(res, contacts, {
-    page: pageNum,
-    pages,
-    total,
-    limit: limitNum,
-  }, 'Contacts retrieved successfully');
+  return paginateResponse(
+    res,
+    contacts,
+    {
+      page: pageNum,
+      pages,
+      total,
+      limit: limitNum,
+    },
+    'Contacts retrieved successfully',
+  );
 });
 
 /**
@@ -81,11 +106,10 @@ export const getContactById = asyncHandler(async (req, res) => {
  */
 export const updateContactStatus = asyncHandler(async (req, res) => {
   const fields = await leadFields(req.body);
-  const contact = await Contact.findByIdAndUpdate(
-    req.params.id,
-    fields,
-    { new: true, runValidators: true }
-  );
+  const contact = await Contact.findByIdAndUpdate(req.params.id, fields, {
+    new: true,
+    runValidators: true,
+  });
 
   if (!contact) {
     return errorResponse(res, 'Contact not found', 404);

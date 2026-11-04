@@ -36,7 +36,7 @@ const brandSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Compound index for the most common query: active brands sorted by order

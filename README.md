@@ -158,3 +158,11 @@ Settings GET responses include `_revision`; PUT must send that revision. Publish
 `notificationdeliveries` persists configured lead alerts. A leased worker resumes pending work and retries up to three times. Authenticated `GET /api/notifications` lists delivery status; `POST /api/notifications/:id/retry` requeues failed/disabled rows. Alert payloads contain references only. Receivers should deduplicate `X-Notification-Id` because delivery is at least once.
 
 `npm run backup` now produces a version 2 checksum manifest and refuses existing destinations. `npm run backup:verify -- <directory>` verifies the snapshot without a database connection. `npm run backup:restore-check -- <directory>` requires an explicit `RESTORE_MONGODB_URI` and empty `RESTORE_DATABASE_NAME` beginning `restore_check_`; it compares restored BSON records and index definitions and retains the recovery copy. These commands do not schedule backups. Real production restore/scheduling checks have not been run by development tests.
+
+## Source formatting and image policy
+
+Run `npm run format` to format the source and tests, and `npm run format:check` in review. Backend formatting keeps semicolons and uses a 100-column target.
+
+New product and general branding images retain up to 2400 pixels on each axis, without upscaling or cropping. Client delivery generates smaller modern-format renditions. Previously small uploaded originals must be replaced to obtain more detail. Profile photos use their separate face-cropped policy.
+
+The frontend repository contains `docs/website-audit.md` and `docs/architecture.md`, covering both services and remaining dependency upgrades.

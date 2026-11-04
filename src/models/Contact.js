@@ -12,10 +12,7 @@ const contactSchema = new mongoose.Schema(
       type: String,
       trim: true,
       lowercase: true,
-      match: [
-        /^\S+@\S+\.\S+$/,
-        'Please enter a valid email address',
-      ],
+      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address'],
     },
     phone: {
       type: String,
@@ -50,7 +47,7 @@ const contactSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 contactSchema.index({ status: 1, createdAt: -1 });

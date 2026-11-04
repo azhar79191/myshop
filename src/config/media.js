@@ -3,8 +3,13 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const configuredLimit = Number(process.env.MEDIA_MAX_VIDEO_MB || 100);
-export const MEDIA_MAX_VIDEO_MB = Number.isInteger(configuredLimit) && configuredLimit >= 1 && configuredLimit <= 2048 ? configuredLimit : 100;
-export const MEDIA_UPLOAD_DIR = path.resolve(process.env.MEDIA_UPLOAD_DIR || path.join(projectRoot, 'uploads/media'));
+export const MEDIA_MAX_VIDEO_MB =
+  Number.isInteger(configuredLimit) && configuredLimit >= 1 && configuredLimit <= 2048
+    ? configuredLimit
+    : 100;
+export const MEDIA_UPLOAD_DIR = path.resolve(
+  process.env.MEDIA_UPLOAD_DIR || path.join(projectRoot, 'uploads/media'),
+);
 export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 export const MEDIA_TYPES = {
   'image/jpeg': { extension: '.jpg', kind: 'image' },
@@ -15,11 +20,18 @@ export const MEDIA_TYPES = {
   'video/ogg': { extension: '.ogv', kind: 'video' },
 };
 export const getMediaPolicy = (settings = {}) => {
-  const cloud = process.env.MEDIA_STORAGE === 'cloudinary' || (!process.env.MEDIA_STORAGE && process.env.NODE_ENV === 'production');
+  const cloud =
+    process.env.MEDIA_STORAGE === 'cloudinary' ||
+    (!process.env.MEDIA_STORAGE && process.env.NODE_ENV === 'production');
   const serverLimit = cloud ? Math.min(100, MEDIA_MAX_VIDEO_MB) : MEDIA_MAX_VIDEO_MB;
   return {
     allowVideoUploads: settings.allowVideoUploads !== false,
-    maxVideoSizeMB: Math.min(serverLimit, Number.isInteger(settings.maxVideoSizeMB) && settings.maxVideoSizeMB > 0 ? settings.maxVideoSizeMB : serverLimit),
+    maxVideoSizeMB: Math.min(
+      serverLimit,
+      Number.isInteger(settings.maxVideoSizeMB) && settings.maxVideoSizeMB > 0
+        ? settings.maxVideoSizeMB
+        : serverLimit,
+    ),
     serverMaxVideoSizeMB: serverLimit,
     maxImageSizeMB: 5,
   };

@@ -11,9 +11,9 @@ test('English, Urdu and Roman Urdu crop searches match each other and translated
     assert.ok(pattern.test('گندم کا بیج'));
     assert.ok(pattern.test('gandum'));
     const filter = buildProductQuery({ search: query }).filter;
-    assert.ok(filter.$or.some(field => field['translations.ur.name']));
-    assert.ok(filter.$or.some(field => field.searchAliases));
-    assert.ok(filter.$or.some(field => field.crops));
+    assert.ok(filter.$or.some((field) => field['translations.ur.name']));
+    assert.ok(filter.$or.some((field) => field.searchAliases));
+    assert.ok(filter.$or.some((field) => field.crops));
   }
   assert.ok(new RegExp(productSearchPattern('مكئي'), 'i').test('مکئی'));
 });
@@ -21,7 +21,9 @@ test('custom alias searches remain literal and cannot inject regex operators', (
   const pattern = new RegExp(productSearchPattern('A+B.*(seed)'), 'i');
   assert.ok(pattern.test('A+B.*(seed)'));
   assert.equal(pattern.test('ABanythingseed'), false);
-  assert.deepEqual(productFields({ searchAliases: ['بیج', 'beej'], slug: 'forbidden' }), { searchAliases: ['بیج', 'beej'] });
+  assert.deepEqual(productFields({ searchAliases: ['بیج', 'beej'], slug: 'forbidden' }), {
+    searchAliases: ['بیج', 'beej'],
+  });
 });
 test('mixed-language search terms can match across crop, brand and translated fields', () => {
   const { filter } = buildProductQuery({ search: 'gandum beej', brand: 'Example' });

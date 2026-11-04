@@ -64,7 +64,7 @@ const testimonialSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 testimonialSchema.index({ isApproved: 1, isFeatured: -1, createdAt: -1 });

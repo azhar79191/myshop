@@ -1,7 +1,12 @@
 import { searchSuggestions } from '../utils/searchSuggestions.js';
 import Product from '../models/Product.js';
 import { withRatings } from '../utils/productRatings.js';
-import { successResponse, errorResponse, paginateResponse, asyncHandler } from '../utils/apiResponse.js';
+import {
+  successResponse,
+  errorResponse,
+  paginateResponse,
+  asyncHandler,
+} from '../utils/apiResponse.js';
 import { fileToCloudinaryUrl, filesToCloudinaryUrls } from '../middleware/uploadMiddleware.js';
 import { getPagination } from '../utils/pagination.js';
 import { buildProductQuery, productFields } from '../utils/productQuery.js';
@@ -13,10 +18,15 @@ import { retireCloudinaryImages } from '../utils/cloudinaryAssets.js';
  * @access  Public
  */
 export const getProducts = asyncHandler(async (req, res) => {
-  if (req.query.attention && !req.admin) return errorResponse(res, 'Catalog attention filters require admin access', 403);
+  if (req.query.attention && !req.admin)
+    return errorResponse(res, 'Catalog attention filters require admin access', 403);
   const { filter, sort } = buildProductQuery(req.query);
 
-  const { page: pageNum, limit: limitNum, skip } = getPagination(req.query.page, req.query.limit, 12);
+  const {
+    page: pageNum,
+    limit: limitNum,
+    skip,
+  } = getPagination(req.query.page, req.query.limit, 12);
 
   // Execute query with field selection to reduce payload size
   const [products, total] = await Promise.all([
@@ -33,16 +43,26 @@ export const getProducts = asyncHandler(async (req, res) => {
   let suggestions = [];
   if (!total && req.query.search?.trim()) {
     const { filter: candidateFilter } = buildProductQuery({ ...req.query, search: '' });
-    const candidates = await Product.find(candidateFilter).select('name brand category activeIngredient crops searchAliases translations.ur.name').sort('name _id').limit(300).lean();
+    const candidates = await Product.find(candidateFilter)
+      .select('name brand category activeIngredient crops searchAliases translations.ur.name')
+      .sort('name _id')
+      .limit(300)
+      .lean();
     suggestions = searchSuggestions(req.query.search, candidates);
   }
 
-  return paginateResponse(res, await withRatings(products), {
-    page: pageNum,
-    pages,
-    total,
-    limit: limitNum,
-  }, 'Products retrieved successfully', { suggestions });
+  return paginateResponse(
+    res,
+    await withRatings(products),
+    {
+      page: pageNum,
+      pages,
+      total,
+      limit: limitNum,
+    },
+    'Products retrieved successfully',
+    { suggestions },
+  );
 });
 
 /**
@@ -85,7 +105,11 @@ export const getFeaturedProducts = asyncHandler(async (req, res) => {
     .limit(limit)
     .lean();
 
-  return successResponse(res, await withRatings(products), 'Featured products retrieved successfully');
+  return successResponse(
+    res,
+    await withRatings(products),
+    'Featured products retrieved successfully',
+  );
 });
 
 /**
@@ -192,7 +216,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
     throw error;
   }
   const retainedImages = new Set([product.image, ...product.images]);
-  await retireCloudinaryImages(oldImages.filter(url => !retainedImages.has(url)));
+  await retireCloudinaryImages(oldImages.filter((url) => !retainedImages.has(url)));
   return successResponse(res, product, 'Product updated successfully');
 });
 
@@ -223,7 +247,9 @@ export const getRelatedProducts = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const limit = Math.min(8, getPagination(1, req.query.limit, 4).limit);
 
-  let product = /^[0-9a-fA-F]{24}$/.test(id) ? await Product.findById(id).select('category brand').lean() : null;
+  let product = /^[0-9a-fA-F]{24}$/.test(id)
+    ? await Product.findById(id).select('category brand').lean()
+    : null;
   if (!product) product = await Product.findOne({ slug: id }).select('category brand').lean();
   if (!product) {
     return errorResponse(res, 'Product not found', 404);
@@ -238,5 +264,9 @@ export const getRelatedProducts = asyncHandler(async (req, res) => {
     .limit(limit)
     .lean();
 
-  return successResponse(res, await withRatings(related), 'Related products retrieved successfully');
+  return successResponse(
+    res,
+    await withRatings(related),
+    'Related products retrieved successfully',
+  );
 });

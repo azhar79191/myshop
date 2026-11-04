@@ -1,5 +1,9 @@
 import multer from 'multer';
-import { storage as cloudinaryStorage, profileStorage, siteLogoStorage } from '../config/cloudinary.js';
+import {
+  storage as cloudinaryStorage,
+  profileStorage,
+  siteLogoStorage,
+} from '../config/cloudinary.js';
 
 // File filter for images
 const fileFilter = (req, file, cb) => {
@@ -40,9 +44,13 @@ export const uploadSiteLogoImage = siteLogoUpload.single('image');
 export const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE')
-      return res.status(400).json({ success: false, message: 'File size too large. Maximum size is 5MB.' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'File size too large. Maximum size is 5MB.' });
     if (err.code === 'LIMIT_FILE_COUNT')
-      return res.status(400).json({ success: false, message: 'Too many files. Maximum is 5 images.' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Too many files. Maximum is 5 images.' });
     return res.status(400).json({ success: false, message: err.message });
   }
   if (err) return res.status(400).json({ success: false, message: err.message });
@@ -57,7 +65,7 @@ export const fileToCloudinaryUrl = (file) => {
 
 export const filesToCloudinaryUrls = (files) => {
   if (!files || files.length === 0) return [];
-  return files.map(file => file.path);
+  return files.map((file) => file.path);
 };
 
 // Keep for backward compatibility with base64 check on existing data

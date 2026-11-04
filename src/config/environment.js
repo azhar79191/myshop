@@ -3,9 +3,7 @@ import 'dotenv/config';
 const REQUIRED_ENVIRONMENT_VARIABLES = ['MONGODB_URI', 'JWT_SECRET'];
 
 export const validateEnvironment = (environment = process.env) => {
-  const missing = REQUIRED_ENVIRONMENT_VARIABLES.filter(
-    (key) => !environment[key]?.trim()
-  );
+  const missing = REQUIRED_ENVIRONMENT_VARIABLES.filter((key) => !environment[key]?.trim());
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);

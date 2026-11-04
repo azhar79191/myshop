@@ -1,19 +1,22 @@
 import mongoose from 'mongoose';
 
-const sizeSchema = new mongoose.Schema({
-  stockStatus: { type: String, enum: ['In Stock', 'Low Stock', 'Out of Stock'] },
-  size: {
-    type: String,
-    required: [true, 'Size is required'],
-    maxlength: [100, 'Pack size cannot exceed 100 characters'],
-    trim: true,
+const sizeSchema = new mongoose.Schema(
+  {
+    stockStatus: { type: String, enum: ['In Stock', 'Low Stock', 'Out of Stock'] },
+    size: {
+      type: String,
+      required: [true, 'Size is required'],
+      maxlength: [100, 'Pack size cannot exceed 100 characters'],
+      trim: true,
+    },
+    price: {
+      type: Number,
+      required: [true, 'Price is required'],
+      min: [0, 'Price cannot be negative'],
+    },
   },
-  price: {
-    type: Number,
-    required: [true, 'Price is required'],
-    min: [0, 'Price cannot be negative'],
-  },
-}, { _id: true });
+  { _id: true },
+);
 
 const productSchema = new mongoose.Schema(
   {
@@ -53,7 +56,12 @@ const productSchema = new mongoose.Schema(
       type: [sizeSchema],
       validate: {
         validator: function (v) {
-          return v && v.length > 0 && v.length <= 30 && new Set(v.map(pack => pack.size?.trim().toLowerCase())).size === v.length;
+          return (
+            v &&
+            v.length > 0 &&
+            v.length <= 30 &&
+            new Set(v.map((pack) => pack.size?.trim().toLowerCase())).size === v.length
+          );
         },
         message: 'Provide 1–30 packs with unique size names and prices',
       },
@@ -63,14 +71,41 @@ const productSchema = new mongoose.Schema(
       enum: ['In Stock', 'Low Stock', 'Out of Stock'],
       default: 'In Stock',
     },
-    crops: { type: [String], default: [], validate: v => v.length <= 30 && v.every(s => s.length <= 80) },
-    searchAliases: { type: [{ type: String, trim: true, maxlength: 100 }], default: [], validate: v => v.length <= 30 && v.every(name => name.length > 0) },
+    crops: {
+      type: [String],
+      default: [],
+      validate: (v) => v.length <= 30 && v.every((s) => s.length <= 80),
+    },
+    searchAliases: {
+      type: [{ type: String, trim: true, maxlength: 100 }],
+      default: [],
+      validate: (v) => v.length <= 30 && v.every((name) => name.length > 0),
+    },
     activeIngredient: { type: String, trim: true, maxlength: 300 },
     formulation: { type: String, trim: true, maxlength: 100 },
-    targetProblems: { type: [String], default: [], validate: v => v.length <= 30 && v.every(s => s.length <= 100) },
-    labelUrl: { type: String, trim: true, validate: v => { if (!v) return true; try { return new URL(v).protocol === 'https:' } catch { return false; } } },
+    targetProblems: {
+      type: [String],
+      default: [],
+      validate: (v) => v.length <= 30 && v.every((s) => s.length <= 100),
+    },
+    labelUrl: {
+      type: String,
+      trim: true,
+      validate: (v) => {
+        if (!v) return true;
+        try {
+          return new URL(v).protocol === 'https:';
+        } catch {
+          return false;
+        }
+      },
+    },
     translations: {
-      ur: { name: { type: String, maxlength: 200 }, description: { type: String, maxlength: 3000 }, usage: { type: String, maxlength: 4000 } },
+      ur: {
+        name: { type: String, maxlength: 200 },
+        description: { type: String, maxlength: 3000 },
+        usage: { type: String, maxlength: 4000 },
+      },
     },
     usage: {
       type: String,
@@ -103,7 +138,7 @@ const productSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // Compound indexes for common query patterns
@@ -115,8 +150,12 @@ productSchema.index({ 'sizes.price': 1 }); // For price range queries
 productSchema.index({ stockStatus: 1 }); // For stock filtering
 
 productSchema.pre('validate', function (next) {
-  if (this.sizes?.length && this.sizes.every(pack => pack.stockStatus)) {
-    this.stockStatus = this.sizes.some(pack => pack.stockStatus === 'In Stock') ? 'In Stock' : this.sizes.some(pack => pack.stockStatus === 'Low Stock') ? 'Low Stock' : 'Out of Stock';
+  if (this.sizes?.length && this.sizes.every((pack) => pack.stockStatus)) {
+    this.stockStatus = this.sizes.some((pack) => pack.stockStatus === 'In Stock')
+      ? 'In Stock'
+      : this.sizes.some((pack) => pack.stockStatus === 'Low Stock')
+        ? 'Low Stock'
+        : 'Out of Stock';
   }
   next();
 });
@@ -124,11 +163,13 @@ productSchema.index({ crops: 1 });
 // Pre-save middleware to generate slug
 productSchema.pre('save', function (next) {
   if (!this.slug && this.isModified('name')) {
-    this.slug = this.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-      + '-' + Date.now().toString(36);
+    this.slug =
+      this.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') +
+      '-' +
+      Date.now().toString(36);
   }
   next();
 });

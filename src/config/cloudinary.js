@@ -20,7 +20,9 @@ export const storage = new CloudinaryStorage({
   params: {
     folder: 'bismillah-spray-center/products',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 800, height: 800, crop: 'limit' }],
+    // Preserve enough source detail for high-density product views. Delivery
+    // renditions are resized separately by the frontend image helpers.
+    transformation: [{ width: 2400, height: 2400, crop: 'limit' }],
   },
 });
 
@@ -38,7 +40,7 @@ export const siteLogoStorage = new CloudinaryStorage({
   params: {
     folder: 'bismillah-spray-center/site-branding',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 1000, height: 1000, crop: 'limit' }],
+    transformation: [{ width: 2400, height: 2400, crop: 'limit' }],
   },
 });
 

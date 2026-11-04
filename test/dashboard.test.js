@@ -15,27 +15,52 @@ import Brand from '../src/models/Brand.js';
 import { errorHandler } from '../src/middleware/errorMiddleware.js';
 test('dashboard requires authentication and aggregates all records independently of pagination', async () => {
   const models = [Quote, Product, Contact, ServiceRequest, Testimonial, Gallery, FAQ, Brand];
-  const originals = models.map(Model => ({ countDocuments: Model.countDocuments, aggregate: Model.aggregate }));
-  const findAdmin = Admin.findById, secret = process.env.JWT_SECRET;
+  const originals = models.map((Model) => ({
+    countDocuments: Model.countDocuments,
+    aggregate: Model.aggregate,
+  }));
+  const findAdmin = Admin.findById,
+    secret = process.env.JWT_SECRET;
   process.env.JWT_SECRET = 'dashboard-test-secret';
-  Admin.findById = () => ({ select: async () => ({ _id: '507f1f77bcf86cd799439011', isActive: true, tokenVersion: 0 }) });
+  Admin.findById = () => ({
+    select: async () => ({ _id: '507f1f77bcf86cd799439011', isActive: true, tokenVersion: 0 }),
+  });
   const pipelines = [];
-  for (const Model of models) { Model.countDocuments = async () => 1200; Model.aggregate = async pipeline => { pipelines.push(pipeline); return pipeline[0].$group ? [{ _id: 'Seeds', count: 1200 }] : []; }; }
-  const app = express(); app.use('/api/dashboard', dashboardRoutes); app.use(errorHandler);
-  const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
+  for (const Model of models) {
+    Model.countDocuments = async () => 1200;
+    Model.aggregate = async (pipeline) => {
+      pipelines.push(pipeline);
+      return pipeline[0].$group ? [{ _id: 'Seeds', count: 1200 }] : [];
+    };
+  }
+  const app = express();
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use(errorHandler);
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((resolve) => server.once('listening', resolve));
   const url = `http://127.0.0.1:${server.address().port}/api/dashboard`;
   try {
     assert.equal((await fetch(url)).status, 401);
     const token = jwt.sign({ id: '507f1f77bcf86cd799439011', version: 0 }, process.env.JWT_SECRET);
-    const result = await (await fetch(url, { headers: { Authorization: `Bearer ${token}` } })).json();
-    assert.equal(result.data.products, 1200); assert.equal(result.data.contacts, 1200); assert.equal(result.data.categories[0].count, 1200);
-    assert.equal(result.data.overdue, 3600); assert.equal(result.data.months.length, 6); assert.equal(result.data.newQuotes, 1200); assert.equal(result.data.missingDetails, 1200);
-    const monthly = pipelines.find(pipeline => pipeline[0].$match);
+    const result = await (
+      await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    ).json();
+    assert.equal(result.data.products, 1200);
+    assert.equal(result.data.contacts, 1200);
+    assert.equal(result.data.categories[0].count, 1200);
+    assert.equal(result.data.overdue, 3600);
+    assert.equal(result.data.months.length, 6);
+    assert.equal(result.data.newQuotes, 1200);
+    assert.equal(result.data.missingDetails, 1200);
+    const monthly = pipelines.find((pipeline) => pipeline[0].$match);
     assert.equal(monthly[1].$group._id.$dateToString.timezone, 'Asia/Karachi');
     assert.equal(monthly[0].$match.createdAt.$gte.getUTCHours(), 19);
   } finally {
-    models.forEach((Model, index) => Object.assign(Model, originals[index])); Admin.findById = findAdmin;
-    if (secret === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = secret;
-    server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+    models.forEach((Model, index) => Object.assign(Model, originals[index]));
+    Admin.findById = findAdmin;
+    if (secret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = secret;
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
   }
 });

@@ -15,7 +15,9 @@
     "backup": "node src/utils/backup.js",
     "migrate:reviews": "node src/utils/linkLegacyReviews.js",
     "backup:verify": "node src/utils/verifyBackup.js",
-    "backup:restore-check": "node src/utils/restoreCheck.js"
+    "backup:restore-check": "node src/utils/restoreCheck.js",
+    "format": "prettier --write \"src/**/*.js\" \"test/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"test/**/*.js\""
   },
   "keywords": [
     "agriculture",
@@ -28,6 +30,7 @@
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^1.41.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
@@ -36,11 +39,11 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.2.0",
     "mongoose": "^8.0.0",
-    "cloudinary": "^1.41.0",
-    "multer-storage-cloudinary": "^4.0.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0"
+    "nodemon": "^3.0.0",
+    "prettier": "3.9.10"
   }
 }

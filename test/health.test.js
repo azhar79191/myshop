@@ -13,12 +13,16 @@ test('health endpoint reports database readiness and disables caching', async ()
       get(`http://127.0.0.1:${port}/api/health`, { agent: false }, (response) => {
         let body = '';
         response.setEncoding('utf8');
-        response.on('data', (chunk) => { body += chunk; });
-        response.on('end', () => resolve({
-          statusCode: response.statusCode,
-          headers: response.headers,
-          payload: JSON.parse(body),
-        }));
+        response.on('data', (chunk) => {
+          body += chunk;
+        });
+        response.on('end', () =>
+          resolve({
+            statusCode: response.statusCode,
+            headers: response.headers,
+            payload: JSON.parse(body),
+          }),
+        );
       }).on('error', reject);
     });
     const ready = mongoose.connection.readyState === 1;

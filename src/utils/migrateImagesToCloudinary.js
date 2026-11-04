@@ -31,7 +31,10 @@ const migrateProducts = async () => {
 
     if (isBase64(product.image)) {
       console.log(`⬆️  Uploading image for product: ${product.name}`);
-      product.image = await uploadBase64ToCloudinary(product.image, 'bismillah-spray-center/products');
+      product.image = await uploadBase64ToCloudinary(
+        product.image,
+        'bismillah-spray-center/products',
+      );
       changed = true;
     }
 

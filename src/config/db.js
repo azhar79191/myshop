@@ -29,10 +29,10 @@ export const connectDB = async () => {
     }
 
     const conn = await mongoose.connect(mongoUri, options);
-    
+
     // Enable query result caching
     mongoose.set('strictQuery', false);
-    
+
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);
     console.log(`🔧 Connection Pool: ${options.maxPoolSize} connections`);
@@ -42,7 +42,9 @@ export const connectDB = async () => {
     console.error('   1. Make sure MongoDB is running locally');
     console.error('   2. Check MONGODB_URI in .env file');
     console.error('   3. For local MongoDB, use: mongodb://localhost:27017/bismillah_spray_center');
-    console.error('   4. For MongoDB Atlas, ensure IP is whitelisted and credentials are correct\n');
+    console.error(
+      '   4. For MongoDB Atlas, ensure IP is whitelisted and credentials are correct\n',
+    );
     process.exit(1);
   }
 };

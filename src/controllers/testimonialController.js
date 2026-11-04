@@ -40,7 +40,12 @@ export const submitTestimonial = async (req, res, next) => {
       ipAddress: req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress,
     });
 
-    successResponse(res, testimonial, 'Thank you for your feedback! It will be reviewed by our team.', 201);
+    successResponse(
+      res,
+      testimonial,
+      'Thank you for your feedback! It will be reviewed by our team.',
+      201,
+    );
   } catch (error) {
     next(error);
   }
@@ -57,7 +62,8 @@ export const getApprovedTestimonials = async (req, res, next) => {
 
     const filter = { isApproved: true };
     if (req.query.productId) {
-      if (!mongoose.isValidObjectId(req.query.productId)) return errorResponse(res, 'Invalid product', 400);
+      if (!mongoose.isValidObjectId(req.query.productId))
+        return errorResponse(res, 'Invalid product', 400);
       filter.productId = req.query.productId;
     }
     if (featured === 'true') filter.isFeatured = true;
@@ -86,7 +92,13 @@ export const getAllTestimonials = async (req, res, next) => {
     if (isApproved !== undefined && !['true', 'false'].includes(isApproved)) {
       return errorResponse(res, 'isApproved must be true or false', 400);
     }
-    if (rating !== undefined && (typeof rating !== 'string' || !Number.isFinite(Number(rating)) || Number(rating) < 1 || Number(rating) > 5)) {
+    if (
+      rating !== undefined &&
+      (typeof rating !== 'string' ||
+        !Number.isFinite(Number(rating)) ||
+        Number(rating) < 1 ||
+        Number(rating) > 5)
+    ) {
       return errorResponse(res, 'Rating must be between 1 and 5', 400);
     }
 
@@ -103,12 +115,17 @@ export const getAllTestimonials = async (req, res, next) => {
 
     const pages = Math.ceil(total / limitNum);
 
-    paginateResponse(res, testimonials, {
-      page: pageNum,
-      pages,
-      total,
-      limit: limitNum,
-    }, 'Testimonials retrieved successfully');
+    paginateResponse(
+      res,
+      testimonials,
+      {
+        page: pageNum,
+        pages,
+        total,
+        limit: limitNum,
+      },
+      'Testimonials retrieved successfully',
+    );
   } catch (error) {
     next(error);
   }
@@ -141,7 +158,9 @@ export const getTestimonialById = async (req, res, next) => {
 export const approveTestimonial = async (req, res, next) => {
   try {
     const { isApproved, isFeatured } = req.body;
-    if ([isApproved, isFeatured].some(value => value !== undefined && typeof value !== 'boolean')) {
+    if (
+      [isApproved, isFeatured].some((value) => value !== undefined && typeof value !== 'boolean')
+    ) {
       return errorResponse(res, 'Approval and featured flags must be booleans', 400);
     }
 
@@ -162,17 +181,20 @@ export const approveTestimonial = async (req, res, next) => {
       updateData.isFeatured = isFeatured;
     }
 
-    const testimonial = await Testimonial.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const testimonial = await Testimonial.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!testimonial) {
       return errorResponse(res, 'Testimonial not found', 404);
     }
 
-    successResponse(res, testimonial, `Testimonial ${updateData.isApproved ? 'approved' : 'rejected'} successfully`);
+    successResponse(
+      res,
+      testimonial,
+      `Testimonial ${updateData.isApproved ? 'approved' : 'rejected'} successfully`,
+    );
   } catch (error) {
     next(error);
   }

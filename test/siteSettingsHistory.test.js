@@ -2,28 +2,60 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import express from 'express';
 import SiteSettings from '../src/models/SiteSettings.js';
-import { getSiteSettings, getSiteSettingsHistory, updateSiteSettings, uploadSiteLogo } from '../src/controllers/siteSettingsController.js';
+import {
+  getSiteSettings,
+  getSiteSettingsHistory,
+  updateSiteSettings,
+  uploadSiteLogo,
+} from '../src/controllers/siteSettingsController.js';
 import siteSettingsRoutes from '../src/routes/siteSettingsRoutes.js';
 
-const invoke = (controller, request) => new Promise((resolve, reject) => {
-  const response = { status() { return this; }, json: resolve, set() { return this; } };
-  controller(request, response, reject);
-});
+const invoke = (controller, request) =>
+  new Promise((resolve, reject) => {
+    const response = {
+      status() {
+        return this;
+      },
+      json: resolve,
+      set() {
+        return this;
+      },
+    };
+    controller(request, response, reject);
+  });
 
 test('settings and logo saves record authenticated actors, bound history, and keep it private', async () => {
-  const originals = { findOne: SiteSettings.findOne, findOneAndUpdate: SiteSettings.findOneAndUpdate };
+  const originals = {
+    findOne: SiteSettings.findOne,
+    findOneAndUpdate: SiteSettings.findOneAndUpdate,
+  };
   let update;
   let revision = 0;
   let stored = { siteName: 'Shop' };
-  const history = [{ savedAt: new Date('2026-01-01T00:00:00Z'), name: 'Earlier admin', action: 'settings' }];
-  SiteSettings.findOne = () => ({ select() { return this; }, lean: async () => ({ settings: stored, history, revision }), then(resolve) { return Promise.resolve({ settings: { siteName: 'Shop' } }).then(resolve); } });
+  const history = [
+    { savedAt: new Date('2026-01-01T00:00:00Z'), name: 'Earlier admin', action: 'settings' },
+  ];
+  SiteSettings.findOne = () => ({
+    select() {
+      return this;
+    },
+    lean: async () => ({ settings: stored, history, revision }),
+    then(resolve) {
+      return Promise.resolve({ settings: { siteName: 'Shop' } }).then(resolve);
+    },
+  });
   SiteSettings.findOneAndUpdate = (filter, change) => {
     update = change;
-    return { lean: async () => ({ settings: stored = change.$set.settings, revision: ++revision }) };
+    return {
+      lean: async () => ({ settings: (stored = change.$set.settings), revision: ++revision }),
+    };
   };
   const admin = { _id: '507f1f77bcf86cd799439011', fullName: 'Verified Admin' };
   try {
-    const result = await invoke(updateSiteSettings, { admin, body: { _revision: revision, siteName: 'Updated Shop', savedBy: 'forged', history: [] } });
+    const result = await invoke(updateSiteSettings, {
+      admin,
+      body: { _revision: revision, siteName: 'Updated Shop', savedBy: 'forged', history: [] },
+    });
     assert.equal(result.data.siteName, 'Updated Shop');
     assert.equal(result.data.savedBy, undefined);
     assert.equal(result.data.history, undefined);
@@ -33,7 +65,11 @@ test('settings and logo saves record authenticated actors, bound history, and ke
     assert.equal(entry.action, 'settings');
     assert.ok(entry.savedAt instanceof Date);
     assert.equal(update.$push.history.$slice, -20);
-    await invoke(uploadSiteLogo, { admin, headers: { 'if-match': String(revision) }, file: { path: 'https://example.com/logo.png' } });
+    await invoke(uploadSiteLogo, {
+      admin,
+      headers: { 'if-match': String(revision) },
+      file: { path: 'https://example.com/logo.png' },
+    });
     assert.equal(update.$push.history.$each[0].action, 'logo');
     const publicResult = await invoke(getSiteSettings, {});
     assert.equal(publicResult.history, undefined);
@@ -49,13 +85,15 @@ test('save history endpoint requires authentication', async () => {
   const app = express();
   app.use('/api/site-settings', siteSettingsRoutes);
   const server = app.listen(0, '127.0.0.1');
-  await new Promise(resolve => server.once('listening', resolve));
+  await new Promise((resolve) => server.once('listening', resolve));
   try {
-    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/site-settings/history`);
+    const response = await fetch(
+      `http://127.0.0.1:${server.address().port}/api/site-settings/history`,
+    );
     assert.equal(response.status, 401);
     assert.equal(response.headers.get('cache-control'), 'no-store');
   } finally {
     server.closeAllConnections();
-    await new Promise(resolve => server.close(resolve));
+    await new Promise((resolve) => server.close(resolve));
   }
 });

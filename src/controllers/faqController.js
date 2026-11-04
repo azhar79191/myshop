@@ -1,9 +1,12 @@
 import FAQ from '../models/FAQ.js';
 import { successResponse, errorResponse, asyncHandler } from '../utils/apiResponse.js';
 
-const faqFields = body => Object.fromEntries(
-  ['question', 'answer', 'category', 'order', 'isActive'].filter(key => body[key] !== undefined).map(key => [key, body[key]])
-);
+const faqFields = (body) =>
+  Object.fromEntries(
+    ['question', 'answer', 'category', 'order', 'isActive']
+      .filter((key) => body[key] !== undefined)
+      .map((key) => [key, body[key]]),
+  );
 
 /**
  * @desc    Get all FAQs

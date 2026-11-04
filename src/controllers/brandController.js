@@ -57,7 +57,15 @@ export const createBrand = async (req, res, next) => {
       return errorResponse(res, 'Name and logo are required', 400);
     }
 
-    const newBrand = await Brand.create({ name, description, logo, website, country, order, isActive });
+    const newBrand = await Brand.create({
+      name,
+      description,
+      logo,
+      website,
+      country,
+      order,
+      isActive,
+    });
     successResponse(res, newBrand, 'Brand created successfully', 201);
   } catch (error) {
     if (req.file) await retireCloudinaryImages([req.file.path]);

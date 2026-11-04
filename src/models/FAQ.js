@@ -31,7 +31,7 @@ const faqSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 faqSchema.index({ category: 1, order: 1 });

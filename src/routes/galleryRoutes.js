@@ -1,10 +1,21 @@
 ﻿import express from 'express';
-import { getAllGalleryImages, getGalleryImageById, createGalleryImage, updateGalleryImage, deleteGalleryImage } from '../controllers/galleryController.js';
+import {
+  getAllGalleryImages,
+  getGalleryImageById,
+  createGalleryImage,
+  updateGalleryImage,
+  deleteGalleryImage,
+} from '../controllers/galleryController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { loadMediaPolicy, uploadMedia } from '../middleware/mediaUploadMiddleware.js';
 const router = express.Router();
-const adminView = (req, res, next) => { req.mediaAdmin = true; next(); };
-router.get('/upload-policy', protect, loadMediaPolicy, (req, res) => res.json({ success: true, data: req.mediaPolicy }));
+const adminView = (req, res, next) => {
+  req.mediaAdmin = true;
+  next();
+};
+router.get('/upload-policy', protect, loadMediaPolicy, (req, res) =>
+  res.json({ success: true, data: req.mediaPolicy }),
+);
 router.get('/admin', protect, adminView, getAllGalleryImages);
 router.get('/admin/:id', protect, adminView, getGalleryImageById);
 router.get('/', getAllGalleryImages);

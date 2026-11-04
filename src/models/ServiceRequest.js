@@ -7,7 +7,11 @@ const serviceRequestSchema = new mongoose.Schema(
     acreage: { type: Number, min: 0, max: 1000000 },
     preferredDate: { type: Date },
     fieldPhotoIds: { type: [String], default: [], select: false },
-    fieldPhotos: { type: [String], default: [], validate: v => v.length <= 3 && v.every(s => /^https:\/\//i.test(s)) },
+    fieldPhotos: {
+      type: [String],
+      default: [],
+      validate: (v) => v.length <= 3 && v.every((s) => /^https:\/\//i.test(s)),
+    },
     serviceType: {
       type: String,
       required: [true, 'Service type is required'],
@@ -52,7 +56,7 @@ const serviceRequestSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 serviceRequestSchema.index({ status: 1, createdAt: -1 });

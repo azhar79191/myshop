@@ -24,14 +24,23 @@ const startServer = async () => {
 
     // Self-ping to prevent Render free tier sleep (every 14 minutes)
     if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
-      setInterval(() => {
-        const url = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
-        https.get(url, (res) => {
-          console.log(`🏓 Keep-alive ping [${new Date().toISOString()}] → ${url} | Status: ${res.statusCode}`);
-        }).on('error', (err) => {
-          console.error(`❌ Keep-alive ping failed [${new Date().toISOString()}] → ${url} | ${err.message}`);
-        });
-      }, 14 * 60 * 1000);
+      setInterval(
+        () => {
+          const url = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+          https
+            .get(url, (res) => {
+              console.log(
+                `🏓 Keep-alive ping [${new Date().toISOString()}] → ${url} | Status: ${res.statusCode}`,
+              );
+            })
+            .on('error', (err) => {
+              console.error(
+                `❌ Keep-alive ping failed [${new Date().toISOString()}] → ${url} | ${err.message}`,
+              );
+            });
+        },
+        14 * 60 * 1000,
+      );
     }
 
     // Start Express server
@@ -68,7 +77,6 @@ const startServer = async () => {
         process.exit(0);
       });
     });
-
   } catch (error) {
     console.error('Failed to start server:', error.message);
     process.exit(1);
