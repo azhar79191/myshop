@@ -25,6 +25,14 @@ const validateSettings = (settings) => {
     return 'Settings payload must be an object';
   }
 
+  if (settings.siteFavicon !== undefined) {
+    if (typeof settings.siteFavicon !== 'string' || settings.siteFavicon.length > 2000) return 'Favicon must be an HTTPS image URL';
+    if (settings.siteFavicon) {
+      try { if (new URL(settings.siteFavicon).protocol !== 'https:') return 'Favicon must be an HTTPS image URL'; }
+      catch { return 'Favicon must be an HTTPS image URL'; }
+    }
+  }
+
   if (settings.theme && (
     !isHexColor(settings.theme.primary) ||
     !isHexColor(settings.theme.accent)

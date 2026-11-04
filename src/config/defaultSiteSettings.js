@@ -4,6 +4,7 @@ const defaultSiteSettings = {
   siteName: 'Bismillah Spray Center',
   tagline: 'Premium Agricultural Solutions for Pakistan',
   siteLogo: '',
+  siteFavicon: '',
   responseMessage: 'Our team will contact you during business hours. For urgent questions, call or message us on WhatsApp.',
   deliveryAreas: 'Share your village or location so our team can confirm delivery availability.',
   deliveryDetails: 'Our team will confirm any delivery charge and expected timing before you agree to the quote.',
