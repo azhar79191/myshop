@@ -19,9 +19,11 @@ import siteSettingsRoutes from './routes/siteSettingsRoutes.js';
 import { cachePolicyMiddleware } from './middleware/cachePolicyMiddleware.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import { loginRateLimit, submissionRateLimit } from './middleware/rateLimitMiddleware.js';
+import { securityHeaders } from './middleware/securityHeaders.js';
 
 const app = express();
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 0));
+app.use(securityHeaders);
 
 // Enable ETag support for cache validation
 app.set('etag', 'strong');
@@ -43,8 +45,9 @@ app.use(
 // CORS configuration
 const allowedOrigins = new Set([
   'https://bismillahspraycenter.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:3000',
+  ...(process.env.NODE_ENV === 'production'
+    ? []
+    : ['http://localhost:5173', 'http://localhost:3000']),
   ...(process.env.FRONTEND_URL || '')
     .split(',')
     .map((origin) => origin.trim())
@@ -72,6 +75,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Body parsing middleware
+// Authentication JSON never needs the larger allowance used for field photographs.
+app.use('/api/auth', express.json({ limit: '16kb' }));
+app.use('/api/auth', express.urlencoded({ extended: false, limit: '16kb', parameterLimit: 20 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -109,8 +115,6 @@ app.get('/api/health', (req, res) => {
       ? 'Bismillah Spray Center API is running'
       : 'Bismillah Spray Center API database is unavailable',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    uptime: process.uptime(),
   });
 });
 

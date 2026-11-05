@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { productSlug } from '../utils/productSlug.js';
 
 const sizeSchema = new mongoose.Schema(
   {
@@ -163,13 +164,7 @@ productSchema.index({ crops: 1 });
 // Pre-save middleware to generate slug
 productSchema.pre('save', function (next) {
   if (!this.slug && this.isModified('name')) {
-    this.slug =
-      this.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '') +
-      '-' +
-      Date.now().toString(36);
+    this.slug = productSlug(this.name, this._id.toString());
   }
   next();
 });

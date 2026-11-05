@@ -11,6 +11,7 @@ import {
   updateAdminStatus,
 } from '../controllers/authController.js';
 import { protect, superAdminOnly } from '../middleware/authMiddleware.js';
+import { loginRateLimit } from '../middleware/rateLimitMiddleware.js';
 import { uploadProfileImage, handleUploadError } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
@@ -34,7 +35,7 @@ router.get('/staff', protect, async (req, res, next) => {
   }
 });
 router.put('/profile', protect, uploadProfileImage, handleUploadError, updateProfile);
-router.put('/password', protect, updatePassword);
+router.put('/password', protect, loginRateLimit, updatePassword);
 
 // Super admin only routes
 router.post('/admin', protect, superAdminOnly, createAdmin);

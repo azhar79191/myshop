@@ -13,6 +13,19 @@ const https = (value) => {
   }
 };
 export function validateContentSettings(settings) {
+  for (const [key, max] of [
+    ['siteName', 120],
+    ['tagline', 300],
+  ])
+    if (settings[key] !== undefined && (!string(settings[key], max) || !settings[key].trim()))
+      return `Invalid ${key}`;
+  if (settings.siteLogo !== undefined && !https(settings.siteLogo)) return 'Use an HTTPS logo URL';
+  if (settings.social !== undefined) {
+    if (!object(settings.social) || Object.keys(settings.social).length > 10)
+      return 'Invalid social links';
+    if (Object.values(settings.social).some((value) => !https(value)))
+      return 'Social links must use HTTPS URLs';
+  }
   if (settings.aboutStats !== undefined) {
     if (
       !Array.isArray(settings.aboutStats) ||
@@ -117,6 +130,16 @@ export function validateContentSettings(settings) {
   }
   if (settings.contact !== undefined) {
     if (!object(settings.contact)) return 'Invalid contact settings';
+    for (const [key, max] of [
+      ['phone', 50],
+      ['whatsapp', 50],
+      ['email', 254],
+      ['address', 500],
+    ])
+      if (settings.contact[key] !== undefined && !string(settings.contact[key], max))
+        return 'Invalid contact details';
+    if (settings.contact.googleMaps !== undefined && !https(settings.contact.googleMaps))
+      return 'Use an HTTPS map URL';
     for (const [key, max] of [
       ['latitude', 90],
       ['longitude', 180],

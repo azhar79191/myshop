@@ -18,7 +18,9 @@ export const login = async (req, res) => {
       typeof username !== 'string' ||
       typeof password !== 'string' ||
       !username.trim() ||
-      !password
+      !password ||
+      username.length > 50 ||
+      Buffer.byteLength(password, 'utf8') > 1024
     ) {
       return errorResponse(res, 'Please provide username and password', 400);
     }
@@ -34,7 +36,7 @@ export const login = async (req, res) => {
 
     // Check if admin is active
     if (!admin.isActive) {
-      return errorResponse(res, 'Account is deactivated', 401);
+      return errorResponse(res, 'Invalid credentials', 401);
     }
 
     // Check password
@@ -138,8 +140,8 @@ export const updatePassword = async (req, res) => {
       return errorResponse(res, 'Please provide current and new password', 400);
     }
 
-    if (newPassword.length < 12) {
-      return errorResponse(res, 'New password must be at least 12 characters', 400);
+    if (newPassword.length < 12 || Buffer.byteLength(newPassword, 'utf8') > 72) {
+      return errorResponse(res, 'Use at least 12 characters and no more than 72 UTF-8 bytes', 400);
     }
 
     // Get admin with password
@@ -177,12 +179,19 @@ export const createAdmin = async (req, res) => {
     const { username, email, password, fullName, role } = req.body;
 
     // Validate input
-    if (!username || !email || !password || !fullName) {
+    if (
+      ![username, email, password, fullName].every(
+        (value) => typeof value === 'string' && value.trim(),
+      ) ||
+      username.length > 50 ||
+      email.length > 254 ||
+      fullName.length > 100
+    ) {
       return errorResponse(res, 'Please provide all required fields', 400);
     }
 
-    if (typeof password !== 'string' || password.length < 12)
-      return errorResponse(res, 'Password must be at least 12 characters', 400);
+    if (password.length < 12 || Buffer.byteLength(password, 'utf8') > 72)
+      return errorResponse(res, 'Use at least 12 characters and no more than 72 UTF-8 bytes', 400);
 
     // Check if admin already exists
     const existingAdmin = await Admin.findOne({
@@ -317,9 +326,13 @@ export const resetPassword = async (req, res, next) => {
       !/^[a-f0-9]{64}$/.test(token) ||
       typeof password !== 'string' ||
       password.length < 12 ||
-      password.length > 128
+      Buffer.byteLength(password, 'utf8') > 72
     )
-      return errorResponse(res, 'Use a valid reset link and a password of 12–128 characters', 400);
+      return errorResponse(
+        res,
+        'Use a valid reset link and a password of at least 12 characters, up to 72 UTF-8 bytes',
+        400,
+      );
     const passwordHash = await bcrypt.hash(password, 10);
     const admin = await Admin.findOneAndUpdate(
       {

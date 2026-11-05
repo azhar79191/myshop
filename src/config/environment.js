@@ -8,6 +8,13 @@ export const validateEnvironment = (environment = process.env) => {
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
+  if (
+    environment.NODE_ENV === 'production' &&
+    (Buffer.byteLength(environment.JWT_SECRET, 'utf8') < 32 ||
+      /^(secret|test|change[-_ ]?me|your[-_ ])/i.test(environment.JWT_SECRET))
+  ) {
+    throw new Error('Production JWT_SECRET must be a strong random secret of at least 32 bytes.');
+  }
 
   const port = Number(environment.PORT || 5000);
   const proxyHops = Number(environment.TRUST_PROXY_HOPS || 0);
