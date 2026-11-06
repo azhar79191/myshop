@@ -1,6 +1,10 @@
 import cloudinary from '../config/cloudinary.js';
+import { integrationEnvironment } from './integrationSettings.js';
 
-export const getCloudinaryPublicId = (value, cloudName = process.env.CLOUDINARY_CLOUD_NAME) => {
+export const getCloudinaryPublicId = (
+  value,
+  cloudName = integrationEnvironment().CLOUDINARY_CLOUD_NAME,
+) => {
   try {
     const url = new URL(value);
     if (url.hostname !== 'res.cloudinary.com' || url.protocol !== 'https:') return null;

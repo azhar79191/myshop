@@ -1,4 +1,5 @@
-export function configurationStatus(environment = process.env) {
+import { integrationEnvironment } from './integrationSettings.js';
+export function configurationStatus(environment = integrationEnvironment()) {
   const has = (...keys) =>
     keys.every((key) => typeof environment[key] === 'string' && environment[key].trim());
   return {

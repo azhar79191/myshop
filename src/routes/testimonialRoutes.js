@@ -8,10 +8,11 @@ import {
   deleteTestimonial,
 } from '../controllers/testimonialController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { submissionRateLimit } from '../middleware/rateLimitMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', submitTestimonial);
+router.post('/', submissionRateLimit, submitTestimonial);
 router.get('/approved', getApprovedTestimonials);
 
 // Protected routes (Admin only)

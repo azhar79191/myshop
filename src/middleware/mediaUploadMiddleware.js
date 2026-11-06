@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import multer from 'multer';
 import cloudinary from '../config/cloudinary.js';
 import SiteSettings from '../models/SiteSettings.js';
+import { integrationEnvironment } from '../utils/integrationSettings.js';
 import { MEDIA_UPLOAD_DIR, MEDIA_TYPES, IMAGE_MAX_BYTES, getMediaPolicy } from '../config/media.js';
 
 export const removeLocalMedia = async (filename) => {
@@ -72,7 +73,7 @@ export const uploadMedia = (req, res, next) => {
   if (
     provider === 'cloudinary' &&
     !['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'].every(
-      (key) => process.env[key],
+      (key) => integrationEnvironment()[key],
     )
   )
     return res

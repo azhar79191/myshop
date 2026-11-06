@@ -3,6 +3,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { generateToken } from '../middleware/authMiddleware.js';
+import { integrationEnvironment } from '../utils/integrationSettings.js';
 
 /**
  * @desc    Login admin
@@ -269,12 +270,13 @@ export const updateAdminStatus = async (req, res) => {
 
 export const forgotPassword = async (req, res, next) => {
   try {
+    const environment = integrationEnvironment();
     const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     if (!email || email.length > 254) return errorResponse(res, 'Enter your email address', 400);
     if (
-      !process.env.RESEND_API_KEY ||
-      !process.env.RECOVERY_FROM_EMAIL ||
-      !process.env.RECOVERY_SITE_URL
+      !environment.RESEND_API_KEY ||
+      !environment.RECOVERY_FROM_EMAIL ||
+      !environment.RECOVERY_SITE_URL
     )
       return errorResponse(
         res,
@@ -287,18 +289,18 @@ export const forgotPassword = async (req, res, next) => {
       admin.resetTokenHash = createHash('sha256').update(token).digest('hex');
       admin.resetTokenExpires = new Date(Date.now() + 30 * 60 * 1000);
       await admin.save();
-      const link = new URL('/admin/reset-password', process.env.RECOVERY_SITE_URL);
+      const link = new URL('/admin/reset-password', environment.RECOVERY_SITE_URL);
       link.hash = token;
       try {
         const sent = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           signal: AbortSignal.timeout(10000),
           headers: {
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+            Authorization: `Bearer ${environment.RESEND_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: process.env.RECOVERY_FROM_EMAIL,
+            from: environment.RECOVERY_FROM_EMAIL,
             to: admin.email,
             subject: 'Reset your Bismillah admin password',
             text: `Reset your password within 30 minutes: ${link.href}\nIf you did not request this, ignore this email.`,

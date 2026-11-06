@@ -18,6 +18,8 @@ const defaultSiteSettings = {
   urduTranslations: [],
   contact: {
     whatsapp: '923001331616',
+    whatsappMessage: 'Assalamualaikum! I would like help from {business} with {page}.',
+    whatsappMessageUr: 'السلام علیکم! مجھے {business} سے {page} کے بارے میں معلومات چاہیے۔',
     phone: '+923001331616',
     email: 'zafarwattoo@gmail.com',
     address: 'Behramka Hithar Tehsil Minchinabad, Punjab, Pakistan',

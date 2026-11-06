@@ -1,4 +1,10 @@
-export const createRateLimiter = ({ limit, windowMs, maxKeys = 10000, now = Date.now }) => {
+export const createRateLimiter = ({
+  limit,
+  windowMs,
+  maxKeys = 10000,
+  now = Date.now,
+  keyGenerator = (req) => req.ip || req.socket.remoteAddress,
+}) => {
   const windows = new Map();
   let lastCleanup = 0;
   return (req, res, next) => {
@@ -8,7 +14,7 @@ export const createRateLimiter = ({ limit, windowMs, maxKeys = 10000, now = Date
       for (const [key, value] of windows) if (value.resetAt <= timestamp) windows.delete(key);
       lastCleanup = timestamp;
     }
-    const key = req.ip || req.socket.remoteAddress;
+    const key = keyGenerator(req);
     let entry = windows.get(key);
     if (!entry || entry.resetAt <= timestamp) {
       if (windows.size >= maxKeys) {

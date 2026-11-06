@@ -1,6 +1,12 @@
 import SiteSettings from './models/SiteSettings.js';
 import NotificationDelivery from './models/NotificationDelivery.js';
 import { startNotificationWorker } from './utils/notifications.js';
+import AutomationDelivery from './models/AutomationDelivery.js';
+import { startAutomationWorker } from './utils/automations.js';
+import WhatsAppReply from './models/WhatsAppReply.js';
+import { drainWhatsAppReplies } from './utils/whatsappAutomation.js';
+import IntegrationSettings from './models/IntegrationSettings.js';
+import { refreshIntegrations } from './utils/integrationSettings.js';
 import https from 'https';
 import Quote from './models/Quote.js';
 import { validateEnvironment } from './config/environment.js';
@@ -16,11 +22,30 @@ const startServer = async () => {
 
     // Connect to MongoDB
     await connectDB();
+    await IntegrationSettings.init();
+    await refreshIntegrations(true);
     // Do not accept quote retries before the unique request identifier index is ready.
     await SiteSettings.init();
     await Quote.init();
     await NotificationDelivery.init();
+    await AutomationDelivery.init();
+    await WhatsAppReply.init();
     const stopNotificationWorker = startNotificationWorker();
+    const stopAutomationWorker = startAutomationWorker();
+    let whatsappRunning = false;
+    const whatsappTimer = setInterval(async () => {
+      if (whatsappRunning) return;
+      whatsappRunning = true;
+      try {
+        await refreshIntegrations();
+        await drainWhatsAppReplies();
+      } catch {
+        console.error('WhatsApp reply queue will retry.');
+      } finally {
+        whatsappRunning = false;
+      }
+    }, 30000);
+    whatsappTimer.unref();
 
     // Self-ping to prevent Render free tier sleep (every 14 minutes)
     if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
@@ -71,6 +96,8 @@ const startServer = async () => {
     // Graceful shutdown on SIGTERM
     process.on('SIGTERM', () => {
       stopNotificationWorker();
+      stopAutomationWorker();
+      clearInterval(whatsappTimer);
       console.log('SIGTERM received. Shutting down gracefully...');
       server.close(() => {
         console.log('Server closed.');

@@ -1,3 +1,4 @@
+import voiceRoutes from './routes/voiceRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import './config/environment.js';
 import express from 'express';
@@ -18,8 +19,10 @@ import testimonialRoutes from './routes/testimonialRoutes.js';
 import siteSettingsRoutes from './routes/siteSettingsRoutes.js';
 import { cachePolicyMiddleware } from './middleware/cachePolicyMiddleware.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
-import { loginRateLimit, submissionRateLimit } from './middleware/rateLimitMiddleware.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
+import whatsappRoutes from './routes/whatsappRoutes.js';
+import integrationRoutes from './routes/integrationRoutes.js';
+import { refreshIntegrations } from './utils/integrationSettings.js';
 
 const app = express();
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 0));
@@ -75,10 +78,25 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Body parsing middleware
+app.use('/api', async (_req, res, next) => {
+  try {
+    if (mongoose.connection.readyState === 1) await refreshIntegrations();
+    next();
+  } catch {
+    res
+      .set('Cache-Control', 'no-store')
+      .status(503)
+      .json({ success: false, message: 'Server integration configuration is unavailable' });
+  }
+});
+app.use('/api/integrations', integrationRoutes);
+// Signature verification must receive the original bytes before JSON parsing.
+app.use('/api/whatsapp/webhook', whatsappRoutes);
 // Authentication JSON never needs the larger allowance used for field photographs.
 app.use('/api/auth', express.json({ limit: '16kb' }));
 app.use('/api/auth', express.urlencoded({ extended: false, limit: '16kb', parameterLimit: 20 }));
 app.use(express.json({ limit: '10mb' }));
+app.use('/api/voice', voiceRoutes);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Disable x-powered-by header for security
@@ -119,14 +137,6 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
-app.post(
-  ['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password'],
-  loginRateLimit,
-);
-app.post(
-  ['/api/quotes', '/api/contact', '/api/service-requests', '/api/testimonials'],
-  submissionRateLimit,
-);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/site-settings', siteSettingsRoutes);

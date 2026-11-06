@@ -1,15 +1,19 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from '../utils/cloudinaryStorage.js';
+import { integrationEnvironment, onIntegrationChange } from '../utils/integrationSettings.js';
 
 /**
  * Configure Cloudinary for image uploads
  */
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+const configure = (env) =>
+  cloudinary.config({
+    cloud_name: env.CLOUDINARY_CLOUD_NAME || '',
+    api_key: env.CLOUDINARY_API_KEY || '',
+    api_secret: env.CLOUDINARY_API_SECRET || '',
+    secure: true,
+  });
+configure(integrationEnvironment());
+onIntegrationChange(configure);
 
 /**
  * Multer storage configuration for Cloudinary

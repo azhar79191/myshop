@@ -130,9 +130,14 @@ export function validateContentSettings(settings) {
   }
   if (settings.contact !== undefined) {
     if (!object(settings.contact)) return 'Invalid contact settings';
+    const contactKeys = ['phone','whatsapp','whatsappMessage','whatsappMessageUr','whatsappAutoReply','email','address','latitude','longitude','googleMaps','googleMapsEmbed'];
+    if (Object.keys(settings.contact).some(key=>!contactKeys.includes(key))) return 'Unsupported public contact field';
     for (const [key, max] of [
       ['phone', 50],
       ['whatsapp', 50],
+      ['whatsappMessage', 1500],
+      ['whatsappMessageUr', 1500],
+      ['whatsappAutoReply', 1500],
       ['email', 254],
       ['address', 500],
     ])

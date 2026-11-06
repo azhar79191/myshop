@@ -17,9 +17,9 @@ import { uploadProfileImage, handleUploadError } from '../middleware/uploadMiddl
 const router = express.Router();
 
 // Public routes
-router.post('/login', login);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/login', loginRateLimit, login);
+router.post('/forgot-password', loginRateLimit, forgotPassword);
+router.post('/reset-password', loginRateLimit, resetPassword);
 
 // Protected routes
 router.get('/me', protect, getMe);

@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import NotificationDelivery from '../models/NotificationDelivery.js';
+import { integrationEnvironment, refreshIntegrations } from './integrationSettings.js';
+import { safeWebhookFetch } from './safeWebhook.js';
 const MAX_ATTEMPTS = 3;
 export async function notifyNewLead(kind, reference) {
-  if (!process.env.LEAD_NOTIFICATION_WEBHOOK) return;
+  if (!integrationEnvironment().LEAD_NOTIFICATION_WEBHOOK) return;
   try {
     await NotificationDelivery.create({ kind, reference });
   } catch (error) {
@@ -12,8 +14,8 @@ export async function notifyNewLead(kind, reference) {
 }
 export async function drainNotificationQueue({
   Model = NotificationDelivery,
-  fetcher = fetch,
-  environment = process.env,
+  fetcher = safeWebhookFetch,
+  environment = integrationEnvironment(),
   now = () => new Date(),
   batchSize = 10,
 } = {}) {
@@ -73,7 +75,12 @@ export async function drainNotificationQueue({
               : {}),
           },
           body: JSON.stringify({
-            event: 'new_lead',
+            event:
+              job.kind === 'stock'
+                ? 'low_stock'
+                : job.kind.startsWith('followup-')
+                  ? 'followup_due'
+                  : 'new_lead',
             kind: job.kind,
             reference: String(job.reference),
           }),
@@ -103,6 +110,7 @@ export function startNotificationWorker() {
     if (running) return;
     running = true;
     try {
+      await refreshIntegrations();
       await drainNotificationQueue();
     } catch {
       console.error('Notification queue check failed; it will retry.');

@@ -7,11 +7,12 @@ import {
   deleteServiceRequest,
 } from '../controllers/serviceRequestController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { submissionRateLimit } from '../middleware/rateLimitMiddleware.js';
 
 const router = express.Router();
 
 // Public routes
-router.post('/', submitServiceRequest);
+router.post('/', submissionRateLimit, submitServiceRequest);
 
 // Protected routes (Admin only)
 router.get('/', protect, getAllServiceRequests);

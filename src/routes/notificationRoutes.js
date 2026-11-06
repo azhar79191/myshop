@@ -1,6 +1,10 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import NotificationDelivery from '../models/NotificationDelivery.js';
+import AutomationDelivery from '../models/AutomationDelivery.js';
+import WhatsAppReply from '../models/WhatsAppReply.js';
+import { whatsappConfigured } from '../utils/whatsappAutomation.js';
+import { integrationEnvironment } from '../utils/integrationSettings.js';
 import { protect } from '../middleware/authMiddleware.js';
 import {
   asyncHandler,
@@ -11,6 +15,24 @@ import {
 import { getPagination } from '../utils/pagination.js';
 const router = express.Router();
 router.use(protect);
+router.get(
+  '/automation',
+  asyncHandler(async (_req, res) => {
+    const counts = async (Model) =>
+      Object.fromEntries(
+        (await Model.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }])).map((row) => [
+          row._id,
+          row.count,
+        ]),
+      );
+    return successResponse(res, {
+      alertsConfigured: Boolean(integrationEnvironment().LEAD_NOTIFICATION_WEBHOOK),
+      whatsappConfigured: whatsappConfigured(),
+      alerts: await counts(AutomationDelivery),
+      whatsapp: await counts(WhatsAppReply),
+    });
+  }),
+);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -29,7 +51,7 @@ router.get(
       rows,
       { page, pages: Math.ceil(total / limit), total, limit },
       'Notification deliveries',
-      { configured: Boolean(process.env.LEAD_NOTIFICATION_WEBHOOK) },
+      { configured: Boolean(integrationEnvironment().LEAD_NOTIFICATION_WEBHOOK) },
     );
   }),
 );
@@ -38,7 +60,7 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id))
       return errorResponse(res, 'Invalid notification reference', 400);
-    if (!process.env.LEAD_NOTIFICATION_WEBHOOK)
+    if (!integrationEnvironment().LEAD_NOTIFICATION_WEBHOOK)
       return errorResponse(res, 'Configure the notification webhook before retrying.', 503);
     const row = await NotificationDelivery.findOneAndUpdate(
       { _id: req.params.id, status: { $in: ['Failed', 'Disabled'] } },
