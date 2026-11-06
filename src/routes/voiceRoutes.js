@@ -10,10 +10,26 @@ const upload = multer({
 }).single('audio');
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 export function validAudio(file) {
-  if (!file?.buffer || !['audio/webm', 'audio/ogg', 'audio/mp4'].includes(file.mimetype))
+  if (
+    !file?.buffer ||
+    !['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav'].includes(file.mimetype)
+  )
     return false;
   const b = file.buffer;
   if (b.length < 12) return false;
+  if (file.mimetype === 'audio/wav')
+    return b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WAVE';
+  if (file.mimetype === 'audio/mpeg')
+    return (
+      b.toString('ascii', 0, 3) === 'ID3' ||
+      (b[0] === 0xff &&
+        (b[1] & 0xe0) === 0xe0 &&
+        (b[1] & 0x18) !== 0x08 &&
+        (b[1] & 0x06) !== 0 &&
+        (b[2] & 0xf0) !== 0 &&
+        (b[2] & 0xf0) !== 0xf0 &&
+        (b[2] & 0x0c) !== 0x0c)
+    );
   if (file.mimetype === 'audio/webm')
     return b.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
   if (file.mimetype === 'audio/ogg') return b.toString('ascii', 0, 4) === 'OggS';
@@ -53,11 +69,9 @@ router.post(
       !['crop', 'product', 'service'].includes(req.body.category) ||
       !validAudio(req.file)
     )
-      return res
-        .status(400)
-        .json({
-          message: 'Provide a Pakistani mobile number, category and valid voice recording.',
-        });
+      return res.status(400).json({
+        message: 'Provide a Pakistani mobile number, category and valid voice recording.',
+      });
     const enquiry = await VoiceEnquiry.create({
       phone,
       category: req.body.category,

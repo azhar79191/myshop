@@ -10,8 +10,13 @@ test('audio validation rejects spoofed types and accepts supported container sig
     validAudio({ mimetype: 'audio/webm', buffer: Buffer.from('<html>not audio</html>') }),
     false,
   );
+  for (const mimetype of ['audio/mpeg', 'audio/wav'])
+    assert.equal(validAudio({ mimetype, buffer: Buffer.from('<html>not audio</html>') }), false);
   for (const [mimetype, buffer] of [
     ['audio/webm', Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(12)])],
+    ['audio/mpeg', Buffer.from('ID31234567890123')],
+    ['audio/mpeg', Buffer.from([0xff, 0xfb, 0x90, 0, 0, 0, 0, 0, 0, 0, 0, 0])],
+    ['audio/wav', Buffer.from('RIFF0000WAVEdata')],
     ['audio/ogg', Buffer.from('OggS123456789012')],
     ['audio/mp4', Buffer.from('0000ftyp12345678')],
   ])

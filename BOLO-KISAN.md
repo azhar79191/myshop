@@ -6,7 +6,7 @@ This feature uses the existing React/Node/MongoDB stack. It does not use speech 
 
 1. Deploy the backend and frontend together, including the microphone Permissions-Policy change in vercel.json.
 2. Sign in as a superadmin and open **Voice enquiries** (`/admin/voice`).
-3. Ask a Punjabi-speaking man to record the displayed welcome script and save it.
+3. Choose **Record voice** to record the displayed welcome script, or **Upload audio** to select an existing recording. Preview it and save it. Supported uploads: MP3, WAV, M4A/MP4, WebM and OGG, up to 3 MB.
 4. Select **Message received**, record that script, and save it.
 5. On the public site open **Bolo Kisan** and press **Listen**. Audio requires a user gesture; browsers may block automatic playback after submission, so the Listen button remains available.
 
